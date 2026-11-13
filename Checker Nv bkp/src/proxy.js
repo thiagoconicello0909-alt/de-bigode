@@ -7,6 +7,7 @@ export function normalizar(linha) {
   let l = String(linha).trim().replace(/\s+/g, "");
   if (!l) return null;
   if (/^(https?|socks5):\/\//i.test(l)) return l;
+
   const p = l.split(":");
   if (p.length === 2) return `http://${p[0]}:${p[1]}`;
   if (p.length === 4) return `http://${p[2]}:${p[3]}@${p[0]}:${p[1]}`;
@@ -23,6 +24,7 @@ export function loadProxies(arquivo) {
   } catch {
     return 0;
   }
+
   const vistos = new Set();
   let invalidas = 0;
   for (const linha of bruto) {
@@ -33,6 +35,7 @@ export function loadProxies(arquivo) {
     vistos.add(url);
     lista.push(url);
   }
+
   if (invalidas) console.log(`  ⚠ ${invalidas} proxy(s) em formato irreconhecível`);
   return lista.length;
 }

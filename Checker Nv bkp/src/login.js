@@ -1,9 +1,10 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import axios from "axios";
 import { ROOT } from "./paths.js";
 import { fetchPerfilHtml } from "./htmlperfil.js";
-import { post, get, normalize, deepFind, infoPath, withRouter, PERFIL_PROCS, credVariants, withAuth } from "./trpc.js";
+import { post, get, normalize, deepFind, infoPath, withRouter, PERFIL_PROCS, credVariants, withAuth, marcarPerfilOk, perfilConhecido, buildHeaders } from "./trpc.js";
 import { DEFAULT_BODY } from "./curl.js";
 import { loadCaptchaConfig, solveCaptcha } from "./captcha.js";
 import { loginComRefresh, trocarToken } from "./sessao.js";
@@ -11,9 +12,10 @@ import { loginComRefresh, trocarToken } from "./sessao.js";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const TOKEN_KEYS = ["token", "accessToken", "access_token", "jwt", "newJwt"];
-const CAPTCHA_RE = /captcha|geetest|verifica|challenge|htoken|gee/i;
+const CAPTCHA_RE = /captcha|geetest|verifica|challenge|htoken|gee|turnstile/i;
 const PROSA = /\s/;
 const TOKENISH = /^[A-Za-z0-9_\-\.~=+/]{16,}$/;
+const MAX_PERFIL_REQ = 8;
 
 function dumpCaptcha(casa, username, etapa, dados) {
   try {
@@ -95,7 +97,6 @@ export function numFrom(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Só aceita id de verdade: sem espaço, formato token, vindo de chave explícita. */
 function captchaIdFrom(norm) {
   const d = norm.data || {};
   const fortes = [];
@@ -132,6 +133,56 @@ function ehCaptcha(norm) {
   return CAPTCHA_RE.test(txt);
 }
 
+/** A casa manda hToken no próprio body? Então o token vai antes do 1º envio. */
+function corpoEsperaToken(body) {
+  const b = (body && body.json) || body || {};
+  return "hToken" in b || !!(body && body.meta && body.meta.values && body.meta.values.hToken);
+}
+
+function aplicarCaptcha(body, sol, captchaId) {
+  const alvos = [body];
+  if (body.json && typeof body.json === "object") alvos.push(body.json);
+
+  for (const alvo of alvos) {
+    if (sol.hToken) alvo.hToken = sol.hToken;
+    if (sol.geeToken) { alvo.geeToken = sol.geeToken; alvo.gee_token = sol.geeToken; alvo.captcha = sol.geeToken; }
+    if (sol.lotNumber) { alvo.lotNumber = sol.lotNumber; alvo.lot_number = sol.lotNumber; }
+    if (sol.captchaOutput) { alvo.captchaOutput = sol.captchaOutput; alvo.captcha_output = sol.captchaOutput; }
+    if (sol.passToken) { alvo.passToken = sol.passToken; alvo.pass_token = sol.passToken; }
+    if (sol.genTime) { alvo.genTime = sol.genTime; alvo.gen_time = sol.genTime; }
+    if (captchaId) { alvo.captchaId = captchaId; alvo.captcha_id = captchaId; }
+  }
+
+  // o marcador "undefined" do tRPC não vale mais quando há token real
+  if (body.meta && body.meta.values) {
+    delete body.meta.values.hToken;
+    if (!Object.keys(body.meta.values).length) delete body.meta.values;
+    if (!Object.keys(body.meta).length) delete body.meta;
+  }
+  return body;
+}
+
+/** Pega o gt/sitekey na página, para resolver o captcha antes do primeiro login. */
+async function gtDaPagina(casa) {
+  if (casa.captchaId) return casa.captchaId;
+  const paginas = [casa.captchaPage, "/login", "/", "/pt"].filter(Boolean);
+  for (const p of paginas) {
+    try {
+      const r = await axios.post("http://127.0.0.1:3334/get", {
+        url: p.startsWith("http") ? p : `https://${casa.domain}${p}`,
+        headers: { ...buildHeaders(casa, {}), accept: "text/html,application/xhtml+xml" },
+        body: "",
+      }, { timeout: 15000, validateStatus: () => true });
+      const html = String(r.data?.text ?? "");
+      const m = html.match(/render=([A-Za-z0-9_-]{10,})/i)
+        || html.match(/["']gt["']\s*:\s*["']([A-Za-z0-9]{16,})["']/i)
+        || html.match(/data-sitekey=["']([^"']+)["']/i);
+      if (m) return m[1];
+    } catch {}
+  }
+  return null;
+}
+
 export async function login(casa, username, password) {
   const modos = casa.passMode && casa.passMode !== "plain" ? [casa.passMode, "plain"] : ["plain", "md5"];
 
@@ -152,11 +203,22 @@ export async function login(casa, username, password) {
     const body = montar(modo);
     if (!body) return { ok: false, error: "bodyTemplate inválido" };
 
+    if (corpoEsperaToken(body) && loadCaptchaConfig().provider !== "disabled") {
+      const gt = await gtDaPagina(casa);
+      const sol0 = await solveCaptcha(casa.domain, casa.tenantId, username, gt);
+      if (sol0) {
+        aplicarCaptcha(body, sol0, gt);
+        dumpCaptcha(casa, username, "captcha preventivo", JSON.stringify(body).slice(0, 3000));
+      } else {
+        dumpCaptcha(casa, username, "captcha preventivo falhou", `gt=${gt || "nao encontrado"}`);
+      }
+    }
+
     let norm = normalize(await post(casa, casa.loginPath, body));
     let token = deepFind(norm.data || {}, TOKEN_KEYS);
 
     if (!token && /muitas solicita|too many|rate limit|aguarde/i.test(norm.msg || "")) {
-      await sleep(9000 + Math.random() * 3000);
+      await sleep(6000 + Math.random() * 2000);
       norm = normalize(await post(casa, casa.loginPath, body));
       token = deepFind(norm.data || {}, TOKEN_KEYS);
     }
@@ -167,7 +229,7 @@ export async function login(casa, username, password) {
       dumpCaptcha(
         casa,
         username,
-        `captcha detectado | provedor=${cfg.provider} | id=${alvoCap ? `${alvoCap.chave}=${alvoCap.id}` : "NAO ENCONTRADO"}`,
+        `captcha | provedor=${cfg.provider} | id=${alvoCap ? `${alvoCap.chave}=${alvoCap.id}` : "NAO ENCONTRADO"}`,
         JSON.stringify({ msg: norm.msg, code: norm.code, data: norm.data }).slice(0, 4000),
       );
 
@@ -176,7 +238,7 @@ export async function login(casa, username, password) {
         continue;
       }
       if (!alvoCap) {
-        ultimo = { ok: false, error: "captcha exigido, mas o id do desafio não foi encontrado na resposta", code: norm.code, modo };
+        ultimo = { ok: false, error: "captcha exigido, mas o id do desafio não foi encontrado", code: norm.code, modo };
         continue;
       }
 
@@ -184,30 +246,16 @@ export async function login(casa, username, password) {
         const sol = await solveCaptcha(casa.domain, casa.tenantId, username, alvoCap.id);
         if (!sol) {
           ultimo = { ok: false, error: "provedor de captcha não devolveu token", code: norm.code, modo };
-          await sleep(1500 * tent);
+          await sleep(1200 * tent);
           continue;
         }
 
         const retry = montar(modo);
-        const alvos = [retry];
-        if (retry.json && typeof retry.json === "object") alvos.push(retry.json);
-        for (const alvo of alvos) {
-          if (sol.hToken) alvo.hToken = sol.hToken;
-          if (sol.geeToken) { alvo.geeToken = sol.geeToken; alvo.gee_token = sol.geeToken; alvo.captcha = sol.geeToken; }
-          if (sol.lotNumber) { alvo.lotNumber = sol.lotNumber; alvo.lot_number = sol.lotNumber; }
-          if (sol.captchaOutput) { alvo.captchaOutput = sol.captchaOutput; alvo.captcha_output = sol.captchaOutput; }
-          if (sol.passToken) { alvo.passToken = sol.passToken; alvo.pass_token = sol.passToken; }
-          if (sol.genTime) { alvo.genTime = sol.genTime; alvo.gen_time = sol.genTime; }
-          alvo.captchaId = alvoCap.id;
-          alvo.captcha_id = alvoCap.id;
-        }
-
-        dumpCaptcha(casa, username, `envio captcha tentativa ${tent}`, JSON.stringify(retry).slice(0, 4000));
+        aplicarCaptcha(retry, sol, alvoCap.id);
 
         norm = normalize(await post(casa, casa.loginPath, retry));
         token = deepFind(norm.data || {}, TOKEN_KEYS);
-        dumpCaptcha(casa, username, `resposta tentativa ${tent}`, JSON.stringify({ msg: norm.msg, code: norm.code, ok: !!token }).slice(0, 1000));
-        if (!token) await sleep(1200 * tent);
+        if (!token) await sleep(1000 * tent);
       }
 
       if (!token) {
@@ -232,7 +280,7 @@ export async function login(casa, username, password) {
   return ultimo;
 }
 
-const INFO_PROCS = ["user.assets", "vip.info", "vip.vip", "user.details", "main.perfil"];
+const rotulo = (p) => String(p).split("/trpc/")[1] || p;
 
 function mergeInto(dest, src, depth = 0) {
   if (!src || typeof src !== "object" || Array.isArray(src) || depth > 4) return dest;
@@ -246,70 +294,89 @@ function mergeInto(dest, src, depth = 0) {
   return dest;
 }
 
-/** Abre a página /main/perfil (via procedures) e junta VIP + saldo. */
+/** Perfil com orçamento: no máximo MAX_PERFIL_REQ requisições, endpoint conhecido primeiro. */
 export async function fetchPerfil(casa, auth) {
+  const conhecido = perfilConhecido(casa.domain);
   const alvos = [];
   if (casa.perfilPath) alvos.push(casa.perfilPath);
+  if (conhecido) alvos.push(conhecido);
   for (const proc of [...(casa.perfilProcs || []), ...PERFIL_PROCS]) {
-    const path = withRouter(casa, proc);
-    if (!alvos.includes(path)) alvos.push(path);
+    const p = withRouter(casa, proc);
+    if (!alvos.includes(p)) alvos.push(p);
   }
 
   const combinado = {};
   const erros = [];
+  const creds = credVariants(auth).slice(0, 2);
+  let usadas = 0;
 
-  const tentar = async (path, metodo, authV) => {
-    try {
-      const raw = metodo === "GET"
-        ? await get(casa, path, { json: {} }, authV)
-        : await post(casa, path, { json: {} }, authV);
-      const norm = normalize(raw);
-      if (norm.ok && norm.data && typeof norm.data === "object") {
-        mergeInto(combinado, norm.data);
-        return true;
-      }
-      if (!norm.ok) erros.push(`${path.split("/trpc/")[1]}: ${norm.msg}`);
-    } catch (e) {
-      erros.push(`${path.split("/trpc/")[1]}: ${e.message}`);
-    }
-    return false;
+  const completo = () => {
+    const acc = extractAccount(combinado, casa);
+    return acc.balance !== null && acc.vip !== null;
+  };
+  const temAlgo = () => {
+    const acc = extractAccount(combinado, casa);
+    return acc.balance !== null || acc.vip !== null;
   };
 
-  for (const cred of credVariants(auth)) {
-    const authV = withAuth(auth, cred);
-    for (const path of alvos) {
-      if (!(await tentar(path, "GET", authV))) await tentar(path, "POST", authV);
-      const acc = extractAccount(combinado, casa);
-      if (acc.balance !== null && acc.vip !== null) break;
+  for (const path of alvos) {
+    if (usadas >= MAX_PERFIL_REQ || completo()) break;
+
+    for (const cred of creds) {
+      if (usadas >= MAX_PERFIL_REQ || completo()) break;
+      const authV = withAuth(auth, cred);
+      let serviu = false;
+
+      for (const metodo of ["GET", "POST"]) {
+        if (usadas >= MAX_PERFIL_REQ) break;
+        usadas++;
+        try {
+          const raw = metodo === "GET"
+            ? await get(casa, path, { json: {} }, authV)
+            : await post(casa, path, { json: {} }, authV);
+          const norm = normalize(raw);
+          if (norm.ok && norm.data && typeof norm.data === "object") {
+            mergeInto(combinado, norm.data);
+            marcarPerfilOk(casa.domain, path);
+            serviu = true;
+            break;
+          }
+          erros.push(`${rotulo(path)}: ${norm.msg}`);
+        } catch (e) {
+          erros.push(`${rotulo(path)}: ${e.message}`);
+        }
+      }
+
+      if (serviu) break;
     }
-    const acc = extractAccount(combinado, casa);
-    if (acc.balance !== null && acc.vip !== null) break;
   }
 
-  if (!Object.keys(combinado).length) {
+  if (!temAlgo()) {
     return { ok: false, error: erros[0] || "perfil não respondeu", data: null };
   }
   return { ok: true, data: combinado };
 }
 
 export async function fetchInfo(casa, auth) {
-  const procs = [infoPath(casa), ...INFO_PROCS.map((p) => withRouter(casa, p))];
+  const procs = [infoPath(casa), ...PERFIL_PROCS.map((p) => withRouter(casa, p))];
   const vistos = new Set();
   const combinado = {};
   const erros = [];
+  let usadas = 0;
 
-  for (const cred of credVariants(auth)) {
+  for (const cred of credVariants(auth).slice(0, 2)) {
     const authV = withAuth(auth, cred);
     for (const path of procs) {
-      if (!path || vistos.has(`${cred}|${path}`)) continue;
+      if (!path || usadas >= MAX_PERFIL_REQ || vistos.has(`${cred}|${path}`)) continue;
       vistos.add(`${cred}|${path}`);
+      usadas++;
       try {
         let norm = normalize(await get(casa, path, { json: {} }, authV));
         if (!norm.ok) norm = normalize(await post(casa, path, { json: {} }, authV));
         if (norm.ok && norm.data && typeof norm.data === "object") mergeInto(combinado, norm.data);
-        else if (!norm.ok) erros.push(`${path.split("/trpc/")[1]}: ${norm.msg}`);
+        else if (!norm.ok) erros.push(`${rotulo(path)}: ${norm.msg}`);
       } catch (e) {
-        erros.push(`${path.split("/trpc/")[1]}: ${e.message}`);
+        erros.push(`${rotulo(path)}: ${e.message}`);
       }
     }
     const acc = extractAccount(combinado, casa);
@@ -333,7 +400,6 @@ const VIP_LABEL_KEYS = [
   "level_name", "gradeName", "grade_name", "vipLevelName", "vipDesc", "vip_desc",
 ];
 
-/** Nível VIP: vem de vip.info → currentVipLevel.level. */
 function vipFrom(root) {
   const atual = findKey(root, ["currentVipLevel", "curVipLevel", "currentLevel", "currentGrade"]);
   if (atual && typeof atual === "object") {
@@ -366,7 +432,6 @@ function vipFrom(root) {
   return null;
 }
 
-/** Saldo bruto: user.assets.balance primeiro. Vem em centavos. */
 function balanceFrom(root) {
   const ativos = findKey(root, ["user.assets", "assets", "wallet"]);
   if (ativos && typeof ativos === "object" && "balance" in ativos) {
@@ -416,7 +481,6 @@ export function classifyMessage(msg) {
   return null;
 }
 
-/** Login → perfil (VIP + saldo). Sem aba de saques. */
 export async function fullCheck(casa, casaNome, username, password) {
   const report = {
     casa: casaNome, conta: `${username}:${password}`, status: "ERRO", detalhe: "",

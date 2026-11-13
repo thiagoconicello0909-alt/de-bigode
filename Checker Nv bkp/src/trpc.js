@@ -1,14 +1,20 @@
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
 import axios from "axios";
+import { ROOT } from "./paths.js";
 import { getNextProxy } from "./proxy.js";
 import { c } from "./ui.js";
+import { obterClearance } from "./cloudflare.js";
 
 const TLS_URL = "http://127.0.0.1:3334";
+const TIMEOUT_REQ = 12000;
+const MAX_TENT = 3;
 
 let minInterval = 0;
 let nextSlot = 0;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Define o espaçamento mínimo (ms) entre requisições de toda a sessão. */
 export function setRateLimit(ms) {
   minInterval = Math.max(0, Number(ms) || 0);
 }
@@ -22,6 +28,31 @@ async function gate() {
   if (wait > 0) await sleep(wait);
 }
 
+let cacheCookies = { mtime: 0, mapa: new Map() };
+
+function cookiesPara(host) {
+  const alvo = String(host || "").toLowerCase();
+  if (!alvo) return null;
+  try {
+    const arq = path.join(ROOT, "cookies.txt");
+    const st = fs.statSync(arq);
+    if (st.mtimeMs !== cacheCookies.mtime) {
+      const mapa = new Map();
+      for (const l of fs.readFileSync(arq, "utf-8").split(/\r?\n/)) {
+        const t = l.trim();
+        if (!t || t.startsWith("#")) continue;
+        const sep = t.indexOf("|") >= 0 ? t.indexOf("|") : t.indexOf("\t");
+        if (sep < 0) continue;
+        mapa.set(t.slice(0, sep).trim().toLowerCase(), t.slice(sep + 1).trim());
+      }
+      cacheCookies = { mtime: st.mtimeMs, mapa };
+    }
+  } catch {}
+  if (cacheCookies.mapa.has(alvo)) return cacheCookies.mapa.get(alvo);
+  for (const [h, cook] of cacheCookies.mapa) if (alvo.endsWith(h)) return cook;
+  return null;
+}
+
 function randomTrace(len = 8) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let out = "";
@@ -32,6 +63,7 @@ function randomTrace(len = 8) {
 export function buildHeaders(casa, auth = {}) {
   const a = typeof auth === "string" ? { token: auth } : (auth || {});
   const headers = { ...(casa.headers || {}) };
+
   headers.origin = `https://${casa.domain}`;
   headers.referer = `https://${casa.domain}/`;
   headers.tenantid = String(casa.tenantId);
@@ -39,17 +71,53 @@ export function buildHeaders(casa, auth = {}) {
   headers["x-device-type"] = casa.deviceType || "DesktopOS";
   headers["x-client-version"] = casa.clientVersion || "v240";
   headers["x-trace-id"] = randomTrace();
+  headers["client-language"] = casa.language || "pt-BR";
+  headers["x-request-source"] = "web_client";
   headers["content-type"] = "application/json";
   headers.accept = headers.accept || "*/*";
-  const cred = a.authTag || a.tokenData || a.token;
-  const scheme = casa.authScheme;
-  if (cred) headers.authorization = scheme === "" ? cred : `${scheme || "Bearer"} ${cred}`;
-  else delete headers.authorization;
+
+  // WAF espera estes três numa chamada cross-site de navegador
+  if (!headers["sec-fetch-site"]) {
+    headers["sec-fetch-site"] = "cross-site";
+    headers["sec-fetch-mode"] = "cors";
+    headers["sec-fetch-dest"] = "empty";
+  }
+  if (!headers.priority) headers.priority = "u=1, i";
+
+  if (!casa.fingerprint) {
+    casa.fingerprint = crypto.randomUUID();
+    casa.fingerprintRequest = crypto.randomUUID();
+  }
+  headers["x-fingerprint-id"] = casa.fingerprint;
+  headers["x-fingerprint-request-id"] = casa.fingerprintRequest;
+
+  if (casa.channelId !== undefined && casa.channelId !== null) headers.channelid = String(casa.channelId);
+
+  if (casa._cfUA) headers["x-force-ua"] = casa._cfUA;
+  const cook = casa._cfCookie || cookiesPara(casa.apiHost || casa.domain);
+  if (cook) headers.cookie = cook;
+
+  // Authorization carrega o token do auth.login (nunca o authTag)
+  if (a.token) {
+    const scheme = casa.authScheme;
+    headers.authorization = scheme === "" ? a.token : `${scheme || "Bearer"} ${a.token}`;
+  } else {
+    delete headers.authorization;
+  }
+
+  const setH = (k, v) => {
+    if (v !== undefined && v !== null && v !== "") headers[k] = String(v);
+    else delete headers[k];
+  };
+  setH("x-auth-tag", a.authTag);
+  setH("x-token-data", a.tokenData);
+  setH("x-tag", a.tag);
+  setH("userid", a.userId);
+
   delete headers["content-length"];
   return headers;
 }
 
-/** Todas as credenciais possíveis da sessão, na ordem de preferência. */
 export function credVariants(auth) {
   const a = typeof auth === "string" ? { token: auth } : (auth || {});
   const lista = [a.authTag, a.tokenData, a.token].filter((x) => typeof x === "string" && x.length > 8);
@@ -57,10 +125,11 @@ export function credVariants(auth) {
   return unicos.length ? unicos : [null];
 }
 
+/** Troca só a credencial de tag; o token do Authorization fica intacto. */
 export function withAuth(auth, cred) {
   const a = typeof auth === "string" ? { token: auth } : { ...(auth || {}) };
   if (!cred) return a;
-  return { ...a, authTag: cred, tokenData: cred, token: cred };
+  return { ...a, authTag: cred, tokenData: cred };
 }
 
 export function extractAuth(norm) {
@@ -82,14 +151,14 @@ export function infoPath(casa) {
   return casa.infoPath || withRouter(casa, "user.assets");
 }
 
-/** tRPC query: input vai na query string, urlencoded. */
 export function buildQuery(path, input) {
   const q = encodeURIComponent(JSON.stringify(input ?? { json: {} }));
   return `${path}${path.includes("?") ? "&" : "?"}input=${q}`;
 }
 
 const RATE = /muitas solicita|too many|rate limit|429|aguarde um momento/i;
-const RETRYABLE = /timeout|ECONNRESET|socket|502|503|504|offline|proxy|cloudflare|<!doctype|just a moment|attention required/i;
+const HTML_RE = /<!doctype|<html|just a moment|attention required|cf-error|cloudflare|verificando/i;
+const REDE_RE = /timeout|ECONNRESET|socket|offline|proxy|sobrecarregado|sem sessao|aborted/i;
 
 async function request(casa, metodo, path, payload, auth) {
   const isGet = metodo === "GET";
@@ -98,47 +167,60 @@ async function request(casa, metodo, path, payload, auth) {
     : `https://${casa.apiHost}${path}`;
 
   let ultimoErro = "";
-  for (let tentativa = 1; tentativa <= 6; tentativa++) {
+
+  for (let t = 1; t <= MAX_TENT; t++) {
     await gate();
     const proxy = getNextProxy();
     let res;
+
     try {
       res = await axios.post(`${TLS_URL}/${isGet ? "get" : "post"}`, {
         url,
         headers: buildHeaders(casa, auth),
         body: isGet ? "" : JSON.stringify(payload ?? { json: {} }),
         ...(proxy ? { proxy } : {}),
-      }, { timeout: 30000, validateStatus: () => true });
+      }, { timeout: TIMEOUT_REQ, validateStatus: () => true });
     } catch (e) {
       ultimoErro = `TLSProxy offline: ${e.message}`;
-      if (tentativa < 6) { await sleep(1200 * tentativa + Math.random() * 700); continue; }
+      if (t < MAX_TENT) { await sleep(500 * t + Math.random() * 300); continue; }
       throw new Error(ultimoErro);
     }
 
     if (res.data?.error) {
       ultimoErro = `TLSProxy: ${res.data.error}`;
-      if (tentativa < 6 && RETRYABLE.test(ultimoErro)) { await sleep(1200 * tentativa + Math.random() * 700); continue; }
+      if (t < MAX_TENT && REDE_RE.test(ultimoErro)) { await sleep(600 * t); continue; }
       throw new Error(ultimoErro);
     }
+
     if (res.status !== 200) {
       ultimoErro = `TLSProxy status ${res.status}`;
-      if (tentativa < 6 && RETRYABLE.test(ultimoErro)) { await sleep(1500 * tentativa + Math.random() * 900); continue; }
+      if (t < MAX_TENT) { await sleep(700 * t); continue; }
       throw new Error(ultimoErro);
     }
 
     const text = res.data?.text ?? "";
-    const cabeca = text.slice(0, 600);
+    const cab = text.slice(0, 800);
 
-    if (tentativa < 6 && RATE.test(cabeca)) {
-      await sleep(9000 * tentativa + Math.random() * 2500);
-      continue;
+    if (RATE.test(cab) && t < MAX_TENT) { await sleep(7000); continue; }
+
+    if (HTML_RE.test(cab)) {
+      if (t < MAX_TENT) {
+        const cf = await obterClearance(casa, proxy);
+        if (cf) {
+          casa._cfCookie = cf.cookie;
+          casa._cfUA = cf.ua || null;
+          await sleep(900);
+          continue;
+        }
+        await sleep(2000);
+        continue;
+      }
+      return text;
     }
-    if (tentativa < 6 && RETRYABLE.test(cabeca)) {
-      await sleep(2000 * tentativa + Math.random() * 1200);
-      continue;
-    }
+
     return text;
   }
+
   throw new Error(ultimoErro || "falha na requisição");
 }
 
@@ -149,8 +231,9 @@ export function normalize(raw) {
   let obj = raw;
   if (typeof obj === "string") {
     const bruto = obj.trim();
-    if (bruto.startsWith("<") || /<!doctype|cloudflare|just a moment|attention required|cf-error/i.test(bruto)) {
-      return { ok: false, code: "HTML", msg: "HTML/bloqueio do Cloudflare" };
+    if (bruto.startsWith("<") || HTML_RE.test(bruto)) {
+      const titulo = (bruto.match(/<title[^>]*>([^<]{0,120})/i) || [])[1] || "";
+      return { ok: false, code: "HTML", msg: `HTML/bloqueio do Cloudflare${titulo ? ` — ${titulo.trim()}` : ""}` };
     }
     try {
       obj = JSON.parse(bruto);
@@ -193,59 +276,33 @@ export function deepFind(root, keys, maxDepth = 8) {
   return null;
 }
 
-const LABEL_KEYS = /^(name|title|label|channelname|bankname|bank_name|methodname|withdrawname|payname|pay_name|typename|type_name|desc|description|remark|account_name)$/;
-
-export function collectLabels(root, max = 30) {
-  const out = new Set();
-  const queue = [[root, 0]];
-  while (queue.length && out.size < max) {
-    const [node, depth] = queue.shift();
-    if (!node || typeof node !== "object" || depth > 9) continue;
-    for (const [k, v] of Object.entries(node)) {
-      if (typeof v === "string" && LABEL_KEYS.test(k.toLowerCase())) {
-        const val = v.trim();
-        if (val && val.length <= 40 && !/^\d+$/.test(val)) out.add(val);
-      } else if (typeof v === "number" && /^(type|channeltype|channel_type|withdrawtype)$/i.test(k)) {
-        out.add(`tipo=${v}`);
-      }
-    }
-    for (const v of Object.values(node)) if (v && typeof v === "object") queue.push([v, depth + 1]);
-  }
-  return [...out];
-}
-
 export function hasData(payload) {
   if (payload === null || payload === undefined) return false;
   if (Array.isArray(payload)) return payload.length > 0;
   if (typeof payload === "object") {
-    const keys = Object.keys(payload).filter((k) => !["code", "msg", "message", "success"].includes(k));
-    return keys.length > 0;
+    return Object.keys(payload).filter((k) => !["code", "msg", "message", "success"].includes(k)).length > 0;
   }
   return true;
 }
 
-/** Procedures candidatas para a página /main/perfil (VIP + saldo). */
+/** Endpoint de perfil que já respondeu nesta casa (evita varrer a lista toda). */
+const perfilOk = new Map();
+export function marcarPerfilOk(domain, path) { perfilOk.set(domain, path); }
+export function perfilConhecido(domain) { return perfilOk.get(domain) || null; }
+
+/** Lista curta e ordenada: os que realmente existem nesse stack. */
 export const PERFIL_PROCS = [
-  "main.perfil",
   "user.assets",
   "vip.info",
   "vip.vip",
-  "member.info",
-  "member.perfil",
-  "member.profile",
-  "member.detail",
-  "member.me",
-  "user.perfil",
-  "user.profile",
+  "user.details",
   "user.info",
+  "main.perfil",
+  "member.info",
   "user.me",
-  "perfil.info",
-  "account.info",
-  "wallet.info",
-  "wallet.balance",
 ];
 
-export const PROBE_PATHS = ["main.perfil", "user.assets", "vip.info", "vip.vip"];
+export const PROBE_PATHS = ["user.assets", "vip.info", "vip.vip", "main.perfil"];
 
 export async function probe(casa, auth) {
   const found = [];
@@ -254,9 +311,7 @@ export async function probe(casa, auth) {
     for (const metodo of ["GET", "POST"]) {
       for (const payload of [{ json: {} }, { json: { type: 1 } }]) {
         try {
-          const raw = metodo === "GET"
-            ? await get(casa, path, payload, auth)
-            : await post(casa, path, payload, auth);
+          const raw = metodo === "GET" ? await get(casa, path, payload, auth) : await post(casa, path, payload, auth);
           const norm = normalize(raw);
           if (norm.ok && hasData(norm.data)) {
             found.push({ path, body: payload, metodo, sample: norm.data });
@@ -271,21 +326,19 @@ export async function probe(casa, auth) {
   return found;
 }
 
-/** Descobre o endpoint de perfil (VIP/saldo) de uma casa. */
 export async function probePerfil(casa, auth) {
-  const lista = [...new Set([...(casa.perfilProcs || []), ...PERFIL_PROCS])];
+  const lista = [...new Set([perfilConhecido(casa.domain), ...(casa.perfilProcs || []), ...PERFIL_PROCS].filter(Boolean))];
   for (const proc of lista) {
-    const path = withRouter(casa, proc);
+    const path = proc.includes("/trpc/") ? proc : withRouter(casa, proc);
     for (const metodo of ["GET", "POST"]) {
-      for (const payload of [{ json: {} }, ...(auth?.userId ? [{ json: { userId: auth.userId } }] : [])]) {
-        try {
-          const raw = metodo === "GET"
-            ? await get(casa, path, payload, auth)
-            : await post(casa, path, payload, auth);
-          const norm = normalize(raw);
-          if (norm.ok && hasData(norm.data)) return { path, body: payload, metodo, sample: norm.data };
-        } catch {}
-      }
+      try {
+        const raw = metodo === "GET" ? await get(casa, path, { json: {} }, auth) : await post(casa, path, { json: {} }, auth);
+        const norm = normalize(raw);
+        if (norm.ok && hasData(norm.data)) {
+          marcarPerfilOk(casa.domain, path);
+          return { path, body: { json: {} }, metodo, sample: norm.data };
+        }
+      } catch {}
     }
   }
   return null;

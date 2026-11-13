@@ -1,0 +1,2129 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<title>Relatório 13/11/2026, 02:53:30</title>
+<style>
+:root{--bg:#0d1117;--pnl:#161b22;--lin:#21262d;--tx:#c9d1d9;--dim:#8b949e;
+--g:#238636;--m:#8957e5;--y:#9e6a03;--r:#b62324;--b:#1f6feb;--gy:#484f58}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.45 "Segoe UI",system-ui,sans-serif}
+header{padding:14px 18px;border-bottom:1px solid var(--lin);background:var(--pnl)}
+h1{margin:0 0 4px;font-size:16px}
+.sub{color:var(--dim);font-size:12px}
+.cards{display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px}
+.card{background:var(--pnl);border:1px solid var(--lin);border-radius:8px;padding:10px 12px;min-width:150px}
+.card-nome{font-weight:600;margin-bottom:6px;color:#fff}
+.card-lin{color:var(--dim);font-size:12px}
+.card-lin .v{color:var(--tx);font-weight:600}
+.card-lin.g .v{color:#3fb950}.card-lin.m .v{color:#bc8cff}.card-lin.r .v{color:#f85149}
+.barra{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 12px;align-items:center}
+input,select,button{background:var(--pnl);color:var(--tx);border:1px solid var(--lin);
+border-radius:6px;padding:6px 9px;font:inherit}
+button{cursor:pointer}button:hover{border-color:var(--dim)}
+button.ativo{background:#1f2937;border-color:#3fb950;color:#fff}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--lin);text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:#11161d;color:var(--dim);cursor:pointer;user-select:none;white-space:nowrap}
+tbody tr:hover{background:#12181f}
+td.conta{font-family:Consolas,monospace;white-space:nowrap}
+td.num{text-align:right;white-space:nowrap}
+td.det{color:var(--dim);max-width:340px}
+td.bonus{white-space:nowrap}
+.chip{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;color:#fff;white-space:nowrap}
+.chip.bonus{background:var(--m)}.chip.hit{background:var(--g)}.chip.sem_saldo{background:var(--y)}
+.chip.proibida{background:var(--r)}.chip.senha{background:var(--b)}.chip.nao_existe{background:var(--gy)}
+.chip.captcha{background:#9e6a03}.chip.bloqueio{background:#8b3a1f}.chip.schema{background:#5a3b8b}
+.chip.rate{background:#7a5c00}.chip.inconclusivo{background:#5a4b13}.chip.erro{background:#6e2b2b}
+.vazio{padding:30px;text-align:center;color:var(--dim)}
+</style></head><body>
+<header>
+<h1>Relatório de check</h1>
+<div class="sub">13/11/2026, 02:53:30 · 200 conta(s) processada(s) · 4 casa(s)</div>
+</header>
+<div class="cards"><div class="card"><div class="card-nome">w78777</div>
+        <div class="card-lin"><span class="v">200</span> contas</div>
+        <div class="card-lin g"><span class="v">1</span> hits</div>
+        <div class="card-lin m"><span class="v">0</span> bônus</div>
+        <div class="card-lin r"><span class="v">2</span> proibidas</div>
+        <div class="card-lin d">soma saldo: R$ 11,56</div></div><div class="card"><div class="card-nome">2127c</div>
+        <div class="card-lin"><span class="v">0</span> contas</div>
+        <div class="card-lin g"><span class="v">0</span> hits</div>
+        <div class="card-lin m"><span class="v">0</span> bônus</div>
+        <div class="card-lin r"><span class="v">0</span> proibidas</div>
+        <div class="card-lin d">soma saldo: R$ 0,00</div></div><div class="card"><div class="card-nome">hu279t56</div>
+        <div class="card-lin"><span class="v">0</span> contas</div>
+        <div class="card-lin g"><span class="v">0</span> hits</div>
+        <div class="card-lin m"><span class="v">0</span> bônus</div>
+        <div class="card-lin r"><span class="v">0</span> proibidas</div>
+        <div class="card-lin d">soma saldo: R$ 0,00</div></div><div class="card"><div class="card-nome">3539a</div>
+        <div class="card-lin"><span class="v">0</span> contas</div>
+        <div class="card-lin g"><span class="v">0</span> hits</div>
+        <div class="card-lin m"><span class="v">0</span> bônus</div>
+        <div class="card-lin r"><span class="v">0</span> proibidas</div>
+        <div class="card-lin d">soma saldo: R$ 0,00</div></div></div>
+<div class="barra">
+  <input id="busca" placeholder="buscar conta, nome, CPF...">
+  <select id="casa"><option value="">todas as casas</option><option value="w78777">w78777</option><option value="2127c">2127c</option><option value="hu279t56">hu279t56</option><option value="3539a">3539a</option></select>
+  <button data-tipo="">todos</button>
+  <button data-tipo="bonus">bônus</button>
+  <button data-tipo="hit">hits</button>
+  <button data-tipo="sem_saldo">sem saldo</button>
+  <button data-tipo="proibida">proibidas</button>
+  <button data-tipo="senha">senha errada</button>
+  <button data-tipo="nao_existe">não existe</button>
+  <button data-tipo="inconclusivo">inconclusivo</button>
+  <button data-tipo="erro">erro</button>
+</div>
+<table id="tabela">
+<thead><tr>
+<th data-col="0">casa</th><th data-col="1">conta</th><th data-col="2">status</th>
+<th data-col="3">saldo</th><th data-col="4">vip</th><th data-col="5">nome</th>
+<th data-col="6">cpf</th><th data-col="7">bônus</th><th>detalhe</th>
+</tr></thead>
+<tbody><tr data-tipo="hit" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">51999373230:Nando3315</td>
+        <td><span class="chip hit">HIT</span></td>
+        <td class="num">R$ 0,91</td>
+        <td class="num">3</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">84996070710:Adalis@07</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,80</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">67992287713:140921</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,78</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">74999571073:@4mWz8iRrCdX8</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,60</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">38999582461:147258ca</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,53</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">38999407064:102030</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,43</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">22998171666:22998171666</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,40</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">62986226369:mdc050712</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,39</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">81998992903:Marcos16</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,38</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">66996745387:mega1998</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,36</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21986141554:N#eXZ.93Dvqx</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,36</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">64981570819:05082002</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,36</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">22998873661:22998873661</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,34</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">97991579831:Cc@238412</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,29</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">41996527764:cascatinha</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,28</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11986144754:R@48142260g</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,28</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">19974223041:batatadoce</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,27</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">92994269610:bina1234</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,27</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">84991290460:ncs1974ncs</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,26</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">69992289250:Evandro.0708</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,24</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31987638431:Lado24</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,24</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">83999275303:JVfdl2005</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,24</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">83998502417:Anaa2026</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,22</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">34996332288:Cauezina10</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,22</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">32999143177:Mqi@t4GS3Wye</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,21</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">51996281271:And971080@</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,20</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21985057684:SparingHades**</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,20</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">62984014015:Fred131725$</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,20</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21964421280:Lucas2020</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,19</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31988647125:79753535</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,18</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">61994508000:121765121m</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,18</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">61981552028:Zilda1987</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,09</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">83987837322:Limao1313</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,08</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">83996554695:beniely@36</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,08</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">81999325333:Marcos16</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,08</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">18996936266:589678Fr</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,07</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">67999018393:Souza6326</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,06</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">17988174204:adm123123</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,06</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">94991373166:Saopaulo16</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,05</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">16981820236:Moises1979</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,04</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">94984259540:r5r6r7r8r9</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,04</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">27996963531:Miguel5@</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,03</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21996375395:A232425@#a</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,03</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21965900651:Limalimao18.</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,03</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">19995947277:29133547</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,01</td>
+        <td class="num">1</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11973547174:prismA&amp;1</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">51999644999:cam170120</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">34984200301:15062018</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">16993702309:@Paulo1310</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21987920125:33135654kl</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">27998908061:walace22</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">54996460172:ale@1302</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11911627888:megasix6</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">61985157854:@nthOny20</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">63981019056:lobo001</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">28999234631:Felipe312</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">27995117310:andrey</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">84999090126:laiza0810</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21997532049:Moosbacher1</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">41999970817:renan4571</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">62996847696:ovatsug1</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">75999148136:Natan123</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">85985573780:26134530</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">43984490590:M1d2l3g4</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">41995281954:Rwolff115@</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">83999275305:JVfdl2005</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">47992155989:37523741</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">46999366858:30102008gui</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">61992592582:Elias123</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="sem_saldo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">53997105220:ana6602</td>
+        <td><span class="chip sem_saldo">SEM SALDO</span></td>
+        <td class="num">R$ 0,00</td>
+        <td class="num">0</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det"></td>
+      </tr><tr data-tipo="proibida" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">66996171543:67p53d82</td>
+        <td><span class="chip proibida">PROIBIDA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">{&quot;message&quot;:&quot;O usuário foi proibido de acessar&quot;,&quot;code&quot;:1002}</td>
+      </tr><tr data-tipo="proibida" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">55999125525:andorinha</td>
+        <td><span class="chip proibida">PROIBIDA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">{&quot;message&quot;:&quot;O usuário foi proibido de acessar&quot;,&quot;code&quot;:1002}</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31995768571:79753535</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31992028028:j@006130</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">71987572230:258369jcs</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">87996237339:3WY2RX]</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21986247360:191510Rj</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">dudaycell:Dudaycell14</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">nyldinho_silva:9170heloisa9450</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">61981552028:zilda1987</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">28999234631:felipe312</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">pri135:prismA&amp;1</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11941845107:prismA&amp;1</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">24998462919:rawan1993</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">86999382351:lizeloah26</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">34716979857:batatadoce</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11992329742:quarenta42</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">8799623733932:1998heliny</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">05211927222:dudaycell14</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">18996936266:589678Fr?</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11999232960:lixandre123</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">93999547473:rafa9954rafa</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">5516991600847:13599886th$</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">lixandreli:xandon123</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11914811145:daya2023</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">xandon:xandon123</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">raffaellsanttos:rafa9954rafa</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">W0115]:87996237339BR1998heliny</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">34998370223:18Deusa*</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">13981605401:adriano23</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">5575981802435:azmt47bjsxc</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">16992722891:m123a789a</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">felipedsm:F!lipe312</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">28999736437:Felipe312</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21992736673:743232</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">07647418610:walace22</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">62984014025:Fred131725$</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">51996281271:97101080</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">62984014015:Fred131725</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">05528186141:Edu99052388</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31971496281:edu2202</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">cidcleilbr:Moosbacher1</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">37991021749:30773077</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">92993153877:Naiane123</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">55999123012:247592jm</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">15991103436:252525</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21979421187:familias2</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">92994269610:bina123</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">24998462919:[fail</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">87996237339:rafa252407</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11973547174:prisma&amp;1</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">W0115]:87996237339ID1998heliny</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">07647418610:walace22?</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">15988338305:A09771819c</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">27996963531:Miguel5@?</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">38999582461:[fail]</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">02474762264:bina1234</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">74999571073:@4mwz8irrcdx8</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">34998370223:18Deusa*?</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">cidcleibrito.com:moosbacher1</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">felipedsm:f!lipe312</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31983897439:812125Mj</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">5516991600847:13599896</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">61981552028:Zilda1987zDEe</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">11976696341:mnb12rtu8</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">02199804727:20070820</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31992028028:J@006130</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">62984014025:fred131725$</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">62984014015:F131725$</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">056.196.194-86:14253647</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">19995947277:29133547:</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">8386668003:tinaesanto</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">15991103436:252525@Cris</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">55999125525:jaimnho2025</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">47996550641:627469</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">05211927222:Dudaycell14</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31987638431:lado24</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">056196194-86:14253647</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21997532049:moosbacher1</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">farollisboa@hotmail.com:farol764</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">00355578859:81001039</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">13991783892:85698569ll</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21969874673:limalimao18</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21986247360:191510rj</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">43172378810:mikael24W</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">15992561743:ikaro1234</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">269999104256:w8352728eZ</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">16993702309:@paulo1310</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21965900651:Limalimao18</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">19989255959:25112001Re@</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31984599463:celular96</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">54996910115:@Sk8Punk</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">64981570819:05082002b</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">45999444172:elias1978</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">26600021879:123123</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">N3w_L1nk_@rmsopsss:n2OMpJpZtE</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">12997500596:ed750870</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">83999275307:JVfdl2005</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">matheus2216:Limalimao18.</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">91992596182:191285</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">48991397858:BrN@449162</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">zavali56:gleyde963</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">87996237339:3wy2rx</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">24998462919:@Rawan1993</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31984599463:Celular96</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">31983897439:812125mj</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">38999582461:davi147258ca</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">5516991600847:13599896Th$</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">27998908061:walace22?</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">51996281271:And971080</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">19995947277:29133547p</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">15991103436:252525@cris</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">18996936266:589678fr</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">19995947277:291335471</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="senha" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">21965900651:limalimao18</td>
+        <td><span class="chip senha">SENHA ERRADA</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Nome de usuário ou senha incorretos</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">Lima:pk5L@GWtEF!zDEe</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">schema-error</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">bleny:J9_1p4rCCG8qdmR</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">schema-error</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">bleny:Gabriela</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">schema-error</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">Lima:J9_1p4rCCG8qdmR</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">schema-error</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">bleny:gabriela</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">schema-error</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">bleni:Gabriela</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">schema-error</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">87996237339:1998heliny</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">87996237339:1998helinyzDEe</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">24998462919:@rawan1993</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">24998462919:Rawan1993</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">5516991600847:13599886Th$</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">87996237339:3wy2rx]</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">5516991600847:BR13599886Th$</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">24998462919:[fail]</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr><tr data-tipo="inconclusivo" data-casa="w78777">
+        <td>w78777</td>
+        <td class="conta">62984014015:f131725$</td>
+        <td><span class="chip inconclusivo">INCONCLUSIVO</span></td>
+        <td class="num">?</td>
+        <td class="num">?</td>
+        <td></td>
+        <td></td>
+        <td class="bonus"></td>
+        <td class="det">Muitas solicitações. Por favor, aguarde um momento.</td>
+      </tr></tbody>
+</table>
+<script>
+const tb = document.querySelector("#tabela tbody");
+const busca = document.querySelector("#busca");
+const selCasa = document.querySelector("#casa");
+let tipoAtual = "";
+function filtrar() {
+  const q = busca.value.toLowerCase();
+  const casa = selCasa.value;
+  for (const tr of tb.rows) {
+    const okTipo = !tipoAtual || tr.dataset.tipo === tipoAtual;
+    const okCasa = !casa || tr.dataset.casa === casa;
+    const okBusca = !q || tr.textContent.toLowerCase().includes(q);
+    tr.style.display = okTipo && okCasa && okBusca ? "" : "none";
+  }
+}
+busca.addEventListener("input", filtrar);
+selCasa.addEventListener("change", filtrar);
+document.querySelectorAll("button[data-tipo]").forEach((b) => {
+  b.addEventListener("click", () => {
+    tipoAtual = b.dataset.tipo;
+    document.querySelectorAll("button[data-tipo]").forEach((x) => x.classList.remove("ativo"));
+    b.classList.add("ativo");
+    filtrar();
+  });
+});
+let dir = 1, col = -1;
+document.querySelectorAll("th[data-col]").forEach((th) => {
+  th.addEventListener("click", () => {
+    const c = Number(th.dataset.col);
+    dir = c === col ? -dir : 1;
+    col = c;
+    const linhas = [...tb.rows];
+    linhas.sort((a, b) => {
+      const x = a.cells[c]?.textContent.trim() || "";
+      const y = b.cells[c]?.textContent.trim() || "";
+      const nx = Number(x.replace(/[^\d,]/g, "").replace(",", "."));
+      const ny = Number(y.replace(/[^\d,]/g, "").replace(",", "."));
+      if (Number.isFinite(nx) && Number.isFinite(ny) && c === 3) return (nx - ny) * dir;
+      return x.localeCompare(y) * dir;
+    });
+    for (const l of linhas) tb.appendChild(l);
+  });
+});
+document.querySelector('button[data-tipo=""]').classList.add("ativo");
+</script>
+</body></html>

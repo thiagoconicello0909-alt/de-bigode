@@ -27,15 +27,15 @@ export function saveCasas(casas) {
 }
 
 const DEFAULT_CONFIG = {
-  threads: 8,
-  delay: 900,
+  threads: 5,
+  delay: 300,
   minBalance: 3,
   minVip: 3,
   sound: true,
   notify: true,
   probeOnRun: false,
-  filtro9: true,
-  txtDetalhado: false,
+  txtDetalhado: true,
+  filtro9: false,
 };
 
 export function loadConfig() {

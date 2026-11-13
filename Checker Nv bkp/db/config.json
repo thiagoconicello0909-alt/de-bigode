@@ -5,5 +5,7 @@
   "minVip": 2,
   "sound": true,
   "notify": true,
-  "probeOnRun": false
+  "probeOnRun": false,
+  "txtDetalhado": true,
+  "filtro9": false
 }

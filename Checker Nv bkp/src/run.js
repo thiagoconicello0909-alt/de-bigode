@@ -1,4 +1,4 @@
-// run.js v10 — timeout por conta, watchdog, HIT só com dado real + branding Nlucky, deepCheck, HTML, Q/parar.js
+// run.js v11 — timeout por conta, watchdog, HIT só com dado real + branding Nlucky, deepCheck, HTML, Q/parar.js
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
@@ -17,10 +17,10 @@ import { criarParada } from "./stop.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// ── prazos (o que faltava) ───────────────────────────────────────────────
-const LIMITE_CHECK = 40000;   // conta inteira
+// ── prazos ───────────────────────────────────────────────────────────────
+const LIMITE_CHECK = 75000;   // conta inteira
 const LIMITE_BONUS = 25000;   // deepCheck
-const LIMITE_TRAVA = 90000;   // watchdog: sem progresso real
+const LIMITE_TRAVA = 120000;  // watchdog: sem progresso real
 const INTERVALO_SOM = 3000;   // anti-tempestade de powershell
 
 class TimeoutConta extends Error {}
@@ -120,9 +120,12 @@ const CLASS_TO_BUCKET = {
   CAPTCHA: "unk",
   INCONCLUSIVO: "unk",
   ERRO: "err",
+  BLOQUEIO: "unk",
+  SCHEMA: "unk",
+  RATE: "unk",
 };
 
-const RETRY_STATUS = new Set(["INCONCLUSIVO", "CAPTCHA", "ERRO"]);
+const RETRY_STATUS = new Set(["INCONCLUSIVO", "CAPTCHA", "ERRO", "BLOQUEIO", "RATE"]);
 
 function tipoDe(report, config) {
   if (report.bonus?.hit) return "bonus";

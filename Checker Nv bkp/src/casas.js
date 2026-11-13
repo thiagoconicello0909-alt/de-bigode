@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import readline from "readline";
 import { ROOT } from "./paths.js";
 import { prompt, c } from "./ui.js";
 import { loadCasas, saveCasas, saveProbe, loadProbe } from "./storage.js";
@@ -27,15 +28,38 @@ async function perguntarNome(sugestao) {
   return nome.replace(/[^a-z0-9_.-]/gi, "_");
 }
 
-export async function cmdAdd() {
+/** Lê a colagem inteira numa única interface — não perde linha no meio. */
+function lerBloco() {
   console.log(`  ${c.DIM}Cole o curl de login. Enter vazio encerra.${c.RESET}\n`);
-  const linhas = [];
-  while (true) {
-    const l = await prompt("  curl> ");
-    if (!l.trim()) break;
-    linhas.push(l);
+  return new Promise((resolve) => {
+    const linhas = [];
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: false });
+    process.stdout.write("  curl> ");
+    rl.on("line", (l) => {
+      if (!l.trim()) { rl.close(); return; }
+      linhas.push(l);
+      process.stdout.write("  curl> ");
+    });
+    rl.on("close", () => resolve(linhas.join("\n")));
+  });
+}
+
+export async function cmdAdd() {
+  let bruto = await lerBloco();
+
+  // colagem veio curta? tenta o curl.txt
+  if (bruto.split("\n").length < 3) {
+    const arquivo = path.join(ROOT, "curl.txt");
+    if (fs.existsSync(arquivo)) {
+      const doArquivo = fs.readFileSync(arquivo, "utf-8");
+      if (doArquivo.trim().length > bruto.length) {
+        bruto = doArquivo;
+        console.log(`  ${c.DIM}usando curl.txt (${doArquivo.length} bytes)${c.RESET}`);
+      }
+    }
   }
-  const blocos = splitCurls(linhas.join("\n"));
+
+  const blocos = splitCurls(bruto);
   if (!blocos.length) return console.log(`  ${c.R}Nada colado.${c.RESET}`);
 
   const casas = loadCasas();
