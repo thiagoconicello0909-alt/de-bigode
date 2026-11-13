@@ -12,7 +12,7 @@ import { loginComRefresh, trocarToken } from "./sessao.js";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const TOKEN_KEYS = ["token", "accessToken", "access_token", "jwt", "newJwt"];
-const CAPTCHA_RE = /captcha|geetest|verifica|challenge|htoken|gee|turnstile/i;
+const CAPTCHA_RE = /captcha|geetest|verifica|challenge|htoken|gee|turnstile|html\/bloqueio|doctype/i;
 const PROSA = /\s/;
 const TOKENISH = /^[A-Za-z0-9_\-\.~=+/]{16,}$/;
 const MAX_PERFIL_REQ = 8;
@@ -119,7 +119,7 @@ function captchaIdFrom(norm) {
     const [no, prof] = fila.shift();
     if (!no || typeof no !== "object" || prof > 5) continue;
     for (const [k, v] of Object.entries(no)) {
-      if (typeof v === "string" && /captcha|challenge|^gt$|geetest|lot_?number/i.test(k)) push(fracos, v, k);
+      if (typeof v === "string" && /captcha|challenge|^gt$|geetest|lot_?number|sitekey/i.test(k)) push(fracos, v, k);
       else if (v && typeof v === "object") fila.push([v, prof + 1]);
     }
   }
@@ -139,12 +139,17 @@ function corpoEsperaToken(body) {
   return "hToken" in b || !!(body && body.meta && body.meta.values && body.meta.values.hToken);
 }
 
-function aplicarCaptcha(body, sol, captchaId) {
+function aplicarCaptcha(casa, body, sol, captchaId) {
+  if (sol.xToken) casa._xToken = sol.xToken;
+
   const alvos = [body];
   if (body.json && typeof body.json === "object") alvos.push(body.json);
 
   for (const alvo of alvos) {
-    if (sol.hToken) alvo.hToken = sol.hToken;
+    if (sol.hToken) {
+      alvo.hToken = sol.hToken;
+      casa._xTokenBody = sol.hToken;
+    }
     if (sol.geeToken) { alvo.geeToken = sol.geeToken; alvo.gee_token = sol.geeToken; alvo.captcha = sol.geeToken; }
     if (sol.lotNumber) { alvo.lotNumber = sol.lotNumber; alvo.lot_number = sol.lotNumber; }
     if (sol.captchaOutput) { alvo.captchaOutput = sol.captchaOutput; alvo.captcha_output = sol.captchaOutput; }
@@ -153,16 +158,20 @@ function aplicarCaptcha(body, sol, captchaId) {
     if (captchaId) { alvo.captchaId = captchaId; alvo.captcha_id = captchaId; }
   }
 
-  // o marcador "undefined" do tRPC não vale mais quando há token real
-  if (body.meta && body.meta.values) {
-    delete body.meta.values.hToken;
-    if (!Object.keys(body.meta.values).length) delete body.meta.values;
-    if (!Object.keys(body.meta).length) delete body.meta;
-  }
+  if (body.meta && body.meta.values && sol.hToken) body.meta.values.hToken = [sol.hToken];
+
   return body;
 }
 
-/** Pega o gt/sitekey na página, para resolver o captcha antes do primeiro login. */
+function extraTurnstile(casa) {
+  return {
+    deviceId: casa.deviceId,
+    sitekeyHeader: casa.turnstile?.sitekeyHeader,
+    action: casa.turnstile?.action,
+    actionBody: casa.turnstile?.actionBody,
+  };
+}
+
 async function gtDaPagina(casa) {
   if (casa.captchaId) return casa.captchaId;
   const paginas = [casa.captchaPage, "/login", "/", "/pt"].filter(Boolean);
@@ -176,7 +185,8 @@ async function gtDaPagina(casa) {
       const html = String(r.data?.text ?? "");
       const m = html.match(/render=([A-Za-z0-9_-]{10,})/i)
         || html.match(/["']gt["']\s*:\s*["']([A-Za-z0-9]{16,})["']/i)
-        || html.match(/data-sitekey=["']([^"']+)["']/i);
+        || html.match(/data-sitekey=["']([^"']+)["']/i)
+        || html.match(/challenges\.cloudflare\.com\/turnstile\/v0\/api\.js\?render=([A-Za-z0-9_-]+)/i);
       if (m) return m[1];
     } catch {}
   }
@@ -184,7 +194,7 @@ async function gtDaPagina(casa) {
 }
 
 export async function login(casa, username, password) {
-  const modos = casa.passMode && casa.passMode !== "plain" ? [casa.passMode, "plain"] : ["plain", "md5"];
+  const modos = casa.passMode && casa.passMode !== "plain" ? [casa.passMode, "plain"] : ["plain"];
 
   const montar = (modo) => {
     let body;
@@ -203,11 +213,14 @@ export async function login(casa, username, password) {
     const body = montar(modo);
     if (!body) return { ok: false, error: "bodyTemplate inválido" };
 
+    casa._xToken = null;
+    casa._xTokenBody = null;
+
     if (corpoEsperaToken(body) && loadCaptchaConfig().provider !== "disabled") {
       const gt = await gtDaPagina(casa);
-      const sol0 = await solveCaptcha(casa.domain, casa.tenantId, username, gt);
+      const sol0 = await solveCaptcha(casa.domain, casa.tenantId, username, gt, extraTurnstile(casa));
       if (sol0) {
-        aplicarCaptcha(body, sol0, gt);
+        aplicarCaptcha(casa, body, sol0, gt);
         dumpCaptcha(casa, username, "captcha preventivo", JSON.stringify(body).slice(0, 3000));
       } else {
         dumpCaptcha(casa, username, "captcha preventivo falhou", `gt=${gt || "nao encontrado"}`);
@@ -225,7 +238,7 @@ export async function login(casa, username, password) {
 
     if (!token && ehCaptcha(norm)) {
       const cfg = loadCaptchaConfig();
-      const alvoCap = captchaIdFrom(norm);
+      const alvoCap = captchaIdFrom(norm) || (casa.captchaId ? { id: casa.captchaId, chave: "casa.captchaId" } : null);
       dumpCaptcha(
         casa,
         username,
@@ -242,8 +255,8 @@ export async function login(casa, username, password) {
         continue;
       }
 
-      for (let tent = 1; tent <= 3 && !token; tent++) {
-        const sol = await solveCaptcha(casa.domain, casa.tenantId, username, alvoCap.id);
+      for (let tent = 1; tent <= 2 && !token; tent++) {
+        const sol = await solveCaptcha(casa.domain, casa.tenantId, username, alvoCap.id, extraTurnstile(casa));
         if (!sol) {
           ultimo = { ok: false, error: "provedor de captcha não devolveu token", code: norm.code, modo };
           await sleep(1200 * tent);
@@ -251,7 +264,7 @@ export async function login(casa, username, password) {
         }
 
         const retry = montar(modo);
-        aplicarCaptcha(retry, sol, alvoCap.id);
+        aplicarCaptcha(casa, retry, sol, alvoCap.id);
 
         norm = normalize(await post(casa, casa.loginPath, retry));
         token = deepFind(norm.data || {}, TOKEN_KEYS);
@@ -294,7 +307,6 @@ function mergeInto(dest, src, depth = 0) {
   return dest;
 }
 
-/** Perfil com orçamento: no máximo MAX_PERFIL_REQ requisições, endpoint conhecido primeiro. */
 export async function fetchPerfil(casa, auth) {
   const conhecido = perfilConhecido(casa.domain);
   const alvos = [];

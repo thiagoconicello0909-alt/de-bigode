@@ -6,10 +6,11 @@ import { ROOT } from "./paths.js";
 import { getNextProxy } from "./proxy.js";
 import { c } from "./ui.js";
 import { obterClearance } from "./cloudflare.js";
+import { obterTokensTurnstile } from "./turnstile.js";
 
 const TLS_URL = "http://127.0.0.1:3334";
 const TIMEOUT_REQ = 12000;
-const MAX_TENT = 3;
+const MAX_TENT = 5;
 
 let minInterval = 0;
 let nextSlot = 0;
@@ -76,7 +77,6 @@ export function buildHeaders(casa, auth = {}) {
   headers["content-type"] = "application/json";
   headers.accept = headers.accept || "*/*";
 
-  // WAF espera estes três numa chamada cross-site de navegador
   if (!headers["sec-fetch-site"]) {
     headers["sec-fetch-site"] = "cross-site";
     headers["sec-fetch-mode"] = "cors";
@@ -97,7 +97,6 @@ export function buildHeaders(casa, auth = {}) {
   const cook = casa._cfCookie || cookiesPara(casa.apiHost || casa.domain);
   if (cook) headers.cookie = cook;
 
-  // Authorization carrega o token do auth.login (nunca o authTag)
   if (a.token) {
     const scheme = casa.authScheme;
     headers.authorization = scheme === "" ? a.token : `${scheme || "Bearer"} ${a.token}`;
@@ -125,7 +124,6 @@ export function credVariants(auth) {
   return unicos.length ? unicos : [null];
 }
 
-/** Troca só a credencial de tag; o token do Authorization fica intacto. */
 export function withAuth(auth, cred) {
   const a = typeof auth === "string" ? { token: auth } : { ...(auth || {}) };
   if (!cred) return a;
@@ -166,18 +164,35 @@ async function request(casa, metodo, path, payload, auth) {
     ? `https://${casa.apiHost}${buildQuery(path, payload)}`
     : `https://${casa.apiHost}${path}`;
 
+  const ehAuth = /\/auth\.(login|registe)/.test(path);
+  let corpo = payload;
   let ultimoErro = "";
+  let semCookie = false;
+  let clearances = 0;
+  let tokensUsados = 0;
 
   for (let t = 1; t <= MAX_TENT; t++) {
     await gate();
     const proxy = getNextProxy();
-    let res;
 
+    const headers = buildHeaders(casa, auth);
+    if (semCookie) delete headers.cookie;
+    if (ehAuth && casa._xToken) headers["x-token"] = casa._xToken;
+
+    if (ehAuth && casa._xTokenBody) {
+      corpo = {
+        ...(corpo || {}),
+        json: { ...((corpo || {}).json || {}), hToken: casa._xTokenBody },
+        meta: { ...((corpo || {}).meta || {}), values: { ...(((corpo || {}).meta || {}).values || {}), hToken: [casa._xTokenBody] } },
+      };
+    }
+
+    let res;
     try {
       res = await axios.post(`${TLS_URL}/${isGet ? "get" : "post"}`, {
         url,
-        headers: buildHeaders(casa, auth),
-        body: isGet ? "" : JSON.stringify(payload ?? { json: {} }),
+        headers,
+        body: isGet ? "" : JSON.stringify(corpo ?? { json: {} }),
         ...(proxy ? { proxy } : {}),
       }, { timeout: TIMEOUT_REQ, validateStatus: () => true });
     } catch (e) {
@@ -204,18 +219,49 @@ async function request(casa, metodo, path, payload, auth) {
     if (RATE.test(cab) && t < MAX_TENT) { await sleep(7000); continue; }
 
     if (HTML_RE.test(cab)) {
-      if (t < MAX_TENT) {
+      if (t >= MAX_TENT) return text;
+
+      // 1ª escolha: cf_clearance — um solve vale 20 min e libera todos os endpoints
+      if (proxy && clearances < 2) {
+        clearances++;
         const cf = await obterClearance(casa, proxy);
         if (cf) {
           casa._cfCookie = cf.cookie;
           casa._cfUA = cf.ua || null;
-          await sleep(900);
+          semCookie = false;
+          await sleep(700);
           continue;
         }
-        await sleep(2000);
+        await sleep(1200);
         continue;
       }
-      return text;
+
+      // reserva: token de Turnstile
+      if (ehAuth && tokensUsados < 1) {
+        tokensUsados++;
+        casa._xToken = null;
+        casa._xTokenBody = null;
+
+        const tok = await obterTokensTurnstile({
+          dominio: casa.domain,
+          tenantId: casa.tenantId,
+          deviceId: casa.deviceId,
+          sitekeyBody: casa.turnstile?.sitekeyBody,
+          sitekeyHeader: casa.turnstile?.sitekeyHeader,
+          action: casa.turnstile?.action,
+          actionBody: casa.turnstile?.actionBody,
+        });
+
+        if (tok) {
+          casa._xToken = tok.header || null;
+          casa._xTokenBody = tok.body || null;
+          await sleep(400);
+          continue;
+        }
+      }
+
+      await sleep(2000);
+      continue;
     }
 
     return text;
@@ -285,12 +331,10 @@ export function hasData(payload) {
   return true;
 }
 
-/** Endpoint de perfil que já respondeu nesta casa (evita varrer a lista toda). */
 const perfilOk = new Map();
 export function marcarPerfilOk(domain, path) { perfilOk.set(domain, path); }
 export function perfilConhecido(domain) { return perfilOk.get(domain) || null; }
 
-/** Lista curta e ordenada: os que realmente existem nesse stack. */
 export const PERFIL_PROCS = [
   "user.assets",
   "vip.info",

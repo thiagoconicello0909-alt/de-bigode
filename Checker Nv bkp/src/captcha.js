@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import axios from "axios";
 import { ROOT } from "./paths.js";
+import { obterTokensTurnstile, ehSitekeyTurnstile } from "./turnstile.js";
 
 const FILE = path.join(ROOT, "db", "captcha.json");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -23,7 +24,6 @@ export function saveCaptchaConfig(cfg) {
   fs.writeFileSync(FILE, JSON.stringify({ ...DEFAULT, ...cfg }, null, 2), "utf-8");
 }
 
-/** Aceita string, JSON de API própria ou resposta de provedor e normaliza. */
 function normalizar(res) {
   if (!res) return null;
   if (typeof res === "string") {
@@ -141,12 +141,26 @@ async function antiCaptcha(cfg, dominio, captchaId) {
   return null;
 }
 
-export async function solveCaptcha(dominio, tenantId, usuario, captchaId) {
+export async function solveCaptcha(dominio, tenantId, usuario, captchaId, extra = {}) {
   const cfg = loadCaptchaConfig();
   if (cfg.provider === "disabled") return null;
   if (!captchaId) return null;
 
   try {
+    if (ehSitekeyTurnstile(captchaId)) {
+      const t = await obterTokensTurnstile({
+        dominio,
+        tenantId,
+        deviceId: extra.deviceId,
+        sitekeyBody: captchaId,
+        sitekeyHeader: extra.sitekeyHeader,
+        action: extra.action,
+        actionBody: extra.actionBody,
+      });
+      if (!t) return null;
+      return { hToken: t.body || null, xToken: t.header || null };
+    }
+
     if (cfg.provider === "custom") return await provedorCustom(cfg, dominio, tenantId, usuario, captchaId);
     if (!cfg.apiKey) return null;
     if (cfg.provider === "capsolver") return await capsolver(cfg, dominio, captchaId);

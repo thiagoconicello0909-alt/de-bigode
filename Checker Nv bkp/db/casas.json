@@ -8,6 +8,13 @@
     "deviceId": "93729576-5ade-4632-9b0c-1c422fb4f9dd",
     "clientVersion": "v240",
     "deviceType": "DesktopOS",
+    "captchaId": "0x4AAAAAAAiHEkDee-yqSdMj",
+    "turnstile": {
+      "sitekeyBody": "0x4AAAAAAAiHEkDee-yqSdMj",
+      "sitekeyHeader": "0x4AAAAAAB0oRY23FyZnllMo",
+      "action": "api_protection",
+      "actionBody": "login"
+    },
     "headers": {
       "accept": "*/*",
       "accept-language": "pt-BR,pt;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",

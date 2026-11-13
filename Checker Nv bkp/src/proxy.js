@@ -2,6 +2,8 @@ import fs from "fs";
 
 let lista = [];
 let idx = 0;
+const cooldown = new Map();
+const BAN_PADRAO = 5 * 60 * 1000;
 
 export function normalizar(linha) {
   let l = String(linha).trim().replace(/\s+/g, "");
@@ -18,6 +20,7 @@ export function normalizar(linha) {
 export function loadProxies(arquivo) {
   lista = [];
   idx = 0;
+  cooldown.clear();
   let bruto = [];
   try {
     bruto = fs.readFileSync(arquivo, "utf8").split(/\r?\n/);
@@ -40,12 +43,30 @@ export function loadProxies(arquivo) {
   return lista.length;
 }
 
+export function banirProxy(proxy, ms = BAN_PADRAO) {
+  if (!proxy) return;
+  cooldown.set(proxy, Date.now() + ms);
+}
+
+export function proxiesLivres() {
+  const agora = Date.now();
+  return lista.filter((p) => (cooldown.get(p) || 0) <= agora).length;
+}
+
+/** Só devolve proxy com cooldown vencido. Se todos estão de castigo, devolve null (vai direto). */
 export function getNextProxy() {
   if (!lista.length) return null;
-  const p = lista[idx % lista.length];
-  idx += 1;
-  return p;
+  const agora = Date.now();
+  for (let i = 0; i < lista.length; i++) {
+    const p = lista[(idx + i) % lista.length];
+    if ((cooldown.get(p) || 0) <= agora) {
+      idx = (idx + i + 1) % lista.length;
+      return p;
+    }
+  }
+  return null;
 }
 
 export const getProxyCount = () => lista.length;
 export const listarProxies = () => [...lista];
+export const proxiesBanidos = () => [...cooldown.values()].filter((t) => t > Date.now()).length;
