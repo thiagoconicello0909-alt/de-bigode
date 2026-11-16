@@ -7,6 +7,7 @@ import { getNextProxy } from "./proxy.js";
 import { c } from "./ui.js";
 import { obterClearance } from "./cloudflare.js";
 import { obterTokensTurnstile } from "./turnstile.js";
+import { obterPar, fetchNoBrowser } from "./browser.js";
 
 const TLS_URL = "http://127.0.0.1:3334";
 const TIMEOUT_REQ = 12000;
@@ -158,6 +159,48 @@ const RATE = /muitas solicita|too many|rate limit|429|aguarde um momento/i;
 const HTML_RE = /<!doctype|<html|just a moment|attention required|cf-error|cloudflare|verificando/i;
 const REDE_RE = /timeout|ECONNRESET|socket|offline|proxy|sobrecarregado|sem sessao|aborted/i;
 
+function comToken(payload, hToken) {
+  if (!hToken) return payload;
+  const copia = JSON.parse(JSON.stringify(payload || { json: {} }));
+  copia.json = copia.json || {};
+  copia.json.hToken = hToken;
+  if (copia.meta && copia.meta.values) delete copia.meta.values.hToken;
+  return copia;
+}
+
+async function postCru(url, headers, corpo) {
+  const res = await axios.post(`${TLS_URL}/post`, {
+    url,
+    headers,
+    body: JSON.stringify(corpo ?? { json: {} }),
+  }, { timeout: TIMEOUT_REQ, validateStatus: () => true });
+  return { status: res.status, texto: String(res.data?.text ?? ""), erro: res.data?.error };
+}
+
+/** auth.login/registe: token vem da fábrica, o POST sai por HTTP direto. */
+async function authViaFabrica(casa, url, payload, auth, acao) {
+  if (casa._precisaToken !== true) {
+    const tent = await postCru(url, buildHeaders(casa, auth), payload);
+    if (tent.status === 200 && !HTML_RE.test(tent.texto.slice(0, 400))) {
+      casa._precisaToken = false;
+      return tent.texto;
+    }
+    casa._precisaToken = true;
+  }
+
+  for (let k = 0; k < 2; k++) {
+    const par = await obterPar(casa, acao);
+    const headers = buildHeaders(casa, auth);
+    headers["x-token"] = par.x;
+    const tent = await postCru(url, headers, comToken(payload, par.h));
+    if (tent.status === 200 && !HTML_RE.test(tent.texto.slice(0, 400))) return tent.texto;
+    await sleep(150);
+  }
+
+  const par = await obterPar(casa, acao);
+  return fetchNoBrowser(casa, payload, acao, par);
+}
+
 async function request(casa, metodo, path, payload, auth) {
   const isGet = metodo === "GET";
   const url = isGet
@@ -165,6 +208,15 @@ async function request(casa, metodo, path, payload, auth) {
     : `https://${casa.apiHost}${path}`;
 
   const ehAuth = /\/auth\.(login|registe)/.test(path);
+
+  if (ehAuth && casa.browserLogin) {
+    try {
+      return await authViaFabrica(casa, url, payload, auth, /registe/.test(path) ? "register" : "login");
+    } catch {
+      // cai no fluxo tradicional abaixo
+    }
+  }
+
   let corpo = payload;
   let ultimoErro = "";
   let semCookie = false;
@@ -221,8 +273,7 @@ async function request(casa, metodo, path, payload, auth) {
     if (HTML_RE.test(cab)) {
       if (t >= MAX_TENT) return text;
 
-      // 1ª escolha: cf_clearance — um solve vale 20 min e libera todos os endpoints
-      if (proxy && clearances < 2) {
+      if (proxy && !casa.rotativa && clearances < 2) {
         clearances++;
         const cf = await obterClearance(casa, proxy);
         if (cf) {
@@ -236,7 +287,6 @@ async function request(casa, metodo, path, payload, auth) {
         continue;
       }
 
-      // reserva: token de Turnstile
       if (ehAuth && tokensUsados < 1) {
         tokensUsados++;
         casa._xToken = null;

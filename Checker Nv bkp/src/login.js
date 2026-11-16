@@ -174,6 +174,7 @@ function extraTurnstile(casa) {
 
 async function gtDaPagina(casa) {
   if (casa.captchaId) return casa.captchaId;
+  if (casa.turnstile?.sitekeyBody) return casa.turnstile.sitekeyBody;
   const paginas = [casa.captchaPage, "/login", "/", "/pt"].filter(Boolean);
   for (const p of paginas) {
     try {
@@ -216,7 +217,7 @@ export async function login(casa, username, password) {
     casa._xToken = null;
     casa._xTokenBody = null;
 
-    if (corpoEsperaToken(body) && loadCaptchaConfig().provider !== "disabled") {
+    if (!casa.browserLogin && corpoEsperaToken(body) && loadCaptchaConfig().provider !== "disabled") {
       const gt = await gtDaPagina(casa);
       const sol0 = await solveCaptcha(casa.domain, casa.tenantId, username, gt, extraTurnstile(casa));
       if (sol0) {
@@ -238,7 +239,9 @@ export async function login(casa, username, password) {
 
     if (!token && ehCaptcha(norm)) {
       const cfg = loadCaptchaConfig();
-      const alvoCap = captchaIdFrom(norm) || (casa.captchaId ? { id: casa.captchaId, chave: "casa.captchaId" } : null);
+      const alvoCap = captchaIdFrom(norm)
+        || (casa.captchaId ? { id: casa.captchaId, chave: "casa.captchaId" } : null)
+        || (casa.turnstile?.sitekeyBody ? { id: casa.turnstile.sitekeyBody, chave: "turnstile.sitekeyBody" } : null);
       dumpCaptcha(
         casa,
         username,

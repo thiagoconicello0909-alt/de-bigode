@@ -7,6 +7,11 @@ const DROP = new Set([
   "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "priority",
 ]);
 
+// Plataforma ycyd123: auth.login é protegida por WAF — o login sai pelo browser.
+const PLATAFORMA = /ycyd123\.com$/i;
+const SITEKEY_HEADER = "0x4AAAAAAB0oRY23FyZnllMo";
+const SITEKEY_BODY = "0x4AAAAAAAiHEkDee-yqSdMj";
+
 function tokenize(text) {
   const tokens = [];
   const pattern = /"((?:\\.|[^"\\])*)"|'([^']*)'|([^\s'"\\]+)|\\(.)/gs;
@@ -175,6 +180,19 @@ export function buildCasa(parsed) {
     bodyTemplate: isLogin && parsed.body ? parsed.body : null,
     passMode: isLogin && parsed.body ? passModeOf(parsed.body) : "plain",
   };
+
+  // casa da plataforma: já nasce com o login pelo browser e as sitekeys
+  if (PLATAFORMA.test(casa.apiHost)) {
+    casa.captchaId = SITEKEY_BODY;
+    casa.browserLogin = true;
+    casa.channelId = 0;
+    casa.turnstile = {
+      sitekeyBody: SITEKEY_BODY,
+      sitekeyHeader: SITEKEY_HEADER,
+      action: "api_protection",
+      actionBody: "login",
+    };
+  }
 
   if (isInfo) casa.infoPath = parsed.path;
 
