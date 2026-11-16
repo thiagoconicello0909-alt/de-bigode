@@ -1,0 +1,203 @@
+{
+  "79": {
+    "domain": "79x1.com",
+    "apiHost": "api.ycyd123.com",
+    "tenantId": "8529815",
+    "loginPath": "/api/frontend/trpc/auth.login",
+    "tokenPath": "/api/frontend/trpc/auth.token",
+    "deviceId": "e85d30b1-4cef-4c74-bdff-83d193e126c0",
+    "clientVersion": "v240",
+    "deviceType": "DesktopOS",
+    "captchaId": "0x4AAAAAAAiHEkDee-yqSdMj",
+    "browserLogin": true,
+    "channelId": 0,
+    "turnstile": {
+      "sitekeyBody": "0x4AAAAAAAiHEkDee-yqSdMj",
+      "sitekeyHeader": "0x4AAAAAAB0oRY23FyZnllMo",
+      "action": "api_protection",
+      "actionBody": "login"
+    },
+    "headers": {
+      "accept": "*/*",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+      "client-language": "pt-BR",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not-A.Brand\";v=\"99\", \"Microsoft Edge\";v=\"157\", \"Chromium\";v=\"157\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "tenantid": "8529815",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+      "x-client-version": "v240",
+      "x-device-type": "DesktopOS"
+    },
+    "authScheme": "Bearer",
+    "bodyTemplate": "{\"json\":{\"username\":\"54999898470\",\"password\":\"Conicello09_\",\"hToken\":null,\"lastLoginDevice\":\"e85d30b1-4cef-4c74-bdff-83d193e126c0\",\"loginDeviceModel\":\"web Windows NT 10.0 windows Windows NT 10.0; Win64; x64\",\"appType\":\"DesktopOS\",\"channelId\":0},\"meta\":{\"values\":{\"hToken\":[\"undefined\"]}}}",
+    "passMode": "plain",
+    "lang": "pt",
+    "criadaEm": "2026-11-13T19:22:37.305Z",
+    "deepCheck": {
+      "enabled": true,
+      "endpoint": "/api/active/receivedAwardList",
+      "body": {
+        "page": 1,
+        "pageSize": 10,
+        "status": 0,
+        "timeDay": 60
+      }
+    },
+    "browserPages": 10,
+    "rotativa": true,
+    "perfilProcs": [
+      "user.assets",
+      "vip.info"
+    ]
+  },
+  "5853": {
+    "domain": "9mulm4.com",
+    "apiHost": "api.ycyd123.com",
+    "tenantId": "9951229",
+    "loginPath": "/api/frontend/trpc/auth.login",
+    "tokenPath": "/api/frontend/trpc/auth.token",
+    "deviceId": "93729576-5ade-4632-9b0c-1c422fb4f9dd",
+    "clientVersion": "v240",
+    "deviceType": "DesktopOS",
+    "captchaId": "0x4AAAAAAAiHEkDee-yqSdMj",
+    "turnstile": {
+      "sitekeyBody": "0x4AAAAAAAiHEkDee-yqSdMj",
+      "sitekeyHeader": "0x4AAAAAAB0oRY23FyZnllMo",
+      "action": "api_protection",
+      "actionBody": "login"
+    },
+    "headers": {
+      "accept": "*/*",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+      "client-language": "pt-BR",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not-A.Brand\";v=\"99\", \"Microsoft Edge\";v=\"157\", \"Chromium\";v=\"157\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "tenantid": "9951229",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+      "x-client-version": "v240",
+      "x-device-type": "DesktopOS"
+    },
+    "authScheme": "Bearer",
+    "bodyTemplate": "{\"json\":{\"username\":\"38998812201\",\"password\":\"thauan1538\",\"hToken\":null,\"lastLoginDevice\":\"93729576-5ade-4632-9b0c-1c422fb4f9dd\",\"loginDeviceModel\":\"web Windows NT 10.0 windows Windows NT 10.0; Win64; x64\",\"appType\":\"DesktopOS\",\"channelId\":0},\"meta\":{\"values\":{\"hToken\":[\"undefined\"]}}}",
+    "passMode": "plain",
+    "lang": "pt",
+    "criadaEm": "2026-11-13T16:23:37.327Z",
+    "deepCheck": {
+      "enabled": true,
+      "endpoint": "/api/active/receivedAwardList",
+      "body": {
+        "page": 1,
+        "pageSize": 10,
+        "status": 0,
+        "timeDay": 60
+      }
+    },
+    "browserLogin": true,
+    "browserPages": 10,
+    "channelId": 0,
+    "rotativa": true,
+    "perfilProcs": [
+      "user.assets",
+      "vip.info"
+    ]
+  },
+  "w78777": {
+    "domain": "w78777.com",
+    "apiHost": "api2.ycyd123.com",
+    "tenantId": "1610468",
+    "loginPath": "/api/frontend/trpc/auth.login",
+    "tokenPath": "/api/frontend/trpc/auth.token",
+    "deviceId": "0908c0cd-0e2e-4c08-8779-fef4fa9e3f90",
+    "clientVersion": "v242",
+    "deviceType": "DesktopOS",
+    "captchaId": "0x4AAAAAAAiHEkDee-yqSdMj",
+    "browserLogin": true,
+    "browserPages": 6,
+    "channelId": 0,
+    "turnstile": {
+      "sitekeyBody": "0x4AAAAAAAiHEkDee-yqSdMj",
+      "sitekeyHeader": "0x4AAAAAAB0oRY23FyZnllMo",
+      "action": "api_protection",
+      "actionBody": "login"
+    },
+    "headers": {
+      "accept": "*/*",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+      "client-language": "pt-BR",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not-A.Brand\";v=\"99\", \"Microsoft Edge\";v=\"157\", \"Chromium\";v=\"157\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "tenantid": "1610468",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+      "x-client-version": "v242",
+      "x-device-type": "DesktopOS"
+    },
+    "authScheme": "Bearer",
+    "bodyTemplate": "{\"json\":{\"username\":\"32999143177\",\"password\":\"Mqi@t4GS3Wye\",\"hToken\":null,\"lastLoginDevice\":\"0908c0cd-0e2e-4c08-8779-fef4fa9e3f90\",\"loginDeviceModel\":\"web Windows NT 10.0 windows Windows NT 10.0; Win64; x64\",\"appType\":\"DesktopOS\",\"channelId\":0},\"meta\":{\"values\":{\"hToken\":[\"undefined\"]}}}",
+    "passMode": "plain",
+    "lang": "pt",
+    "rotativa": true,
+    "perfilProcs": [
+      "user.assets",
+      "vip.info"
+    ]
+  },
+  "57a": {
+    "domain": "f893bij3.com",
+    "apiHost": "api.ycyd123.com",
+    "tenantId": "6155813",
+    "loginPath": "/api/frontend/trpc/auth.login",
+    "tokenPath": "/api/frontend/trpc/auth.token",
+    "deviceId": "7f7481e4-7d04-40da-a28f-5fa58ba88399",
+    "clientVersion": "v240",
+    "deviceType": "DesktopOS",
+    "headers": {
+      "accept": "*/*",
+      "accept-language": "pt-BR,pt;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+      "client-language": "pt-BR",
+      "content-type": "application/json",
+      "sec-ch-ua": "\"Not-A.Brand\";v=\"99\", \"Microsoft Edge\";v=\"157\", \"Chromium\";v=\"157\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"Windows\"",
+      "tenantid": "6155813",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+      "x-client-version": "v240",
+      "x-device-type": "DesktopOS"
+    },
+    "authScheme": "Bearer",
+    "bodyTemplate": "{\"json\":{\"username\":\"61995932899\",\"password\":\"Conicello09_\",\"hToken\":null,\"lastLoginDevice\":\"7f7481e4-7d04-40da-a28f-5fa58ba88399\",\"loginDeviceModel\":\"web Windows NT 10.0 windows Windows NT 10.0; Win64; x64\",\"appType\":\"DesktopOS\",\"channelId\":0},\"meta\":{\"values\":{\"hToken\":[\"undefined\"]}}}",
+    "passMode": "plain",
+    "captchaId": "0x4AAAAAAAiHEkDee-yqSdMj",
+    "browserLogin": true,
+    "channelId": 0,
+    "turnstile": {
+      "sitekeyBody": "0x4AAAAAAAiHEkDee-yqSdMj",
+      "sitekeyHeader": "0x4AAAAAAB0oRY23FyZnllMo",
+      "action": "api_protection",
+      "actionBody": "login"
+    },
+    "lang": "pt",
+    "criadaEm": "2026-11-13T22:03:07.760Z",
+    "deepCheck": {
+      "enabled": true,
+      "endpoint": "/api/active/receivedAwardList",
+      "body": {
+        "page": 1,
+        "pageSize": 10,
+        "status": 0,
+        "timeDay": 60
+      }
+    },
+    "browserPages": 10,
+    "rotativa": true,
+    "perfilProcs": [
+      "user.assets",
+      "vip.info"
+    ]
+  }
+}

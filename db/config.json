@@ -1,0 +1,11 @@
+{
+  "threads": 40,
+  "delay": 5,
+  "minBalance": 3,
+  "minVip": 2,
+  "sound": true,
+  "notify": true,
+  "probeOnRun": false,
+  "txtDetalhado": true,
+  "filtro9": false
+}

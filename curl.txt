@@ -1,0 +1,22 @@
+curl --url 'https://api.ycyd123.com/api/frontend/trpc/auth.login' \
+  -H 'accept: */*' \
+  -H 'accept-language: pt-BR,pt;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6' \
+  -H 'channelid;' \
+  -H 'client-language: pt-BR' \
+  -H 'content-type: application/json' \
+  -H 'origin: https://3539a.com' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://3539a.com/' \
+  -H 'sec-ch-ua: "Not-A.Brand";v="99", "Microsoft Edge";v="157", "Chromium";v="157"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Windows"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'tenantid: 3606032' \
+  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0' \
+  -H 'x-client-version: v240' \
+  -H 'x-device-id: 994ddb17-7dba-4fd6-982f-cd0d8818e8b8' \
+  -H 'x-device-type: DesktopOS' \
+  -H 'x-trace-id: DGQSPY7G' \
+  --data-raw '{"json":{"username":"42984322206","password":"03141526L","hToken":null,"lastLoginDevice":"994ddb17-7dba-4fd6-982f-cd0d8818e8b8","loginDeviceModel":"web Windows NT 10.0 windows Windows NT 10.0; Win64; x64","appType":"DesktopOS","channelId":0},"meta":{"values":{"hToken":["undefined"]}}}'
