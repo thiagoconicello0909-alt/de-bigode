@@ -3,7 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import axios from "axios";
 import { ROOT } from "./paths.js";
-import { getNextProxy } from "./proxy.js";
+import { getNextProxy, banirProxy } from "./proxy.js";
 import { c } from "./ui.js";
 import { obterClearance } from "./cloudflare.js";
 import { obterTokensTurnstile } from "./turnstile.js";
@@ -11,7 +11,7 @@ import { obterPar, fetchNoBrowser } from "./browser.js";
 
 const TLS_URL = "http://127.0.0.1:3334";
 const TIMEOUT_REQ = 12000;
-const MAX_TENT = 5;
+const MAX_TENT = 3;
 
 let minInterval = 0;
 let nextSlot = 0;
@@ -169,15 +169,24 @@ function comToken(payload, hToken) {
 }
 
 async function postCru(url, headers, corpo) {
-  const res = await axios.post(`${TLS_URL}/post`, {
-    url,
-    headers,
-    body: JSON.stringify(corpo ?? { json: {} }),
-  }, { timeout: TIMEOUT_REQ, validateStatus: () => true });
-  return { status: res.status, texto: String(res.data?.text ?? ""), erro: res.data?.error };
+  const proxy = getNextProxy();
+  try {
+    const res = await axios.post(`${TLS_URL}/post`, {
+      url,
+      headers,
+      body: JSON.stringify(corpo ?? { json: {} }),
+      ...(proxy ? { proxy } : {}),
+    }, { timeout: TIMEOUT_REQ, validateStatus: () => true });
+
+    if (res.status === 429 && proxy) banirProxy(proxy, 60000);
+    return { status: res.status, texto: String(res.data?.text ?? ""), erro: res.data?.error };
+  } catch (e) {
+    if (proxy) banirProxy(proxy, 30000);
+    throw e;
+  }
 }
 
-/** auth.login/registe: token vem da fábrica, o POST sai por HTTP direto. */
+/** auth.login/registe: token vem da fábrica, o POST sai pelo proxy. */
 async function authViaFabrica(casa, url, payload, auth, acao) {
   if (casa._precisaToken !== true) {
     const tent = await postCru(url, buildHeaders(casa, auth), payload);
@@ -188,7 +197,7 @@ async function authViaFabrica(casa, url, payload, auth, acao) {
     casa._precisaToken = true;
   }
 
-  for (let k = 0; k < 2; k++) {
+  for (let k = 0; k < 3; k++) {
     const par = await obterPar(casa, acao);
     const headers = buildHeaders(casa, auth);
     headers["x-token"] = par.x;
@@ -224,7 +233,7 @@ async function request(casa, metodo, path, payload, auth) {
   let tokensUsados = 0;
 
   for (let t = 1; t <= MAX_TENT; t++) {
-    await gate();
+    if (!ehAuth) await gate();
     const proxy = getNextProxy();
 
     const headers = buildHeaders(casa, auth);
@@ -249,41 +258,47 @@ async function request(casa, metodo, path, payload, auth) {
       }, { timeout: TIMEOUT_REQ, validateStatus: () => true });
     } catch (e) {
       ultimoErro = `TLSProxy offline: ${e.message}`;
-      if (t < MAX_TENT) { await sleep(500 * t + Math.random() * 300); continue; }
+      if (proxy) banirProxy(proxy, 30000);
+      if (t < MAX_TENT) { await sleep(250 * t + Math.random() * 150); continue; }
       throw new Error(ultimoErro);
     }
 
     if (res.data?.error) {
       ultimoErro = `TLSProxy: ${res.data.error}`;
-      if (t < MAX_TENT && REDE_RE.test(ultimoErro)) { await sleep(600 * t); continue; }
+      if (proxy) banirProxy(proxy, 30000);
+      if (t < MAX_TENT && REDE_RE.test(ultimoErro)) { await sleep(300 * t); continue; }
       throw new Error(ultimoErro);
     }
 
     if (res.status !== 200) {
       ultimoErro = `TLSProxy status ${res.status}`;
-      if (t < MAX_TENT) { await sleep(700 * t); continue; }
+      if (t < MAX_TENT) { await sleep(300 * t); continue; }
       throw new Error(ultimoErro);
     }
 
     const text = res.data?.text ?? "";
     const cab = text.slice(0, 800);
 
-    if (RATE.test(cab) && t < MAX_TENT) { await sleep(7000); continue; }
+    if (RATE.test(cab) && t < MAX_TENT) {
+      if (proxy) banirProxy(proxy, 60000);
+      await sleep(2500);
+      continue;
+    }
 
     if (HTML_RE.test(cab)) {
       if (t >= MAX_TENT) return text;
 
-      if (proxy && !casa.rotativa && clearances < 2) {
+      if (proxy && !casa.rotativa && clearances < 1) {
         clearances++;
         const cf = await obterClearance(casa, proxy);
         if (cf) {
           casa._cfCookie = cf.cookie;
           casa._cfUA = cf.ua || null;
           semCookie = false;
-          await sleep(700);
+          await sleep(500);
           continue;
         }
-        await sleep(1200);
+        await sleep(700);
         continue;
       }
 
@@ -305,12 +320,12 @@ async function request(casa, metodo, path, payload, auth) {
         if (tok) {
           casa._xToken = tok.header || null;
           casa._xTokenBody = tok.body || null;
-          await sleep(400);
+          await sleep(250);
           continue;
         }
       }
 
-      await sleep(2000);
+      await sleep(900);
       continue;
     }
 

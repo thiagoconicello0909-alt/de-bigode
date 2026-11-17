@@ -15,7 +15,7 @@ const TOKEN_KEYS = ["token", "accessToken", "access_token", "jwt", "newJwt"];
 const CAPTCHA_RE = /captcha|geetest|verifica|challenge|htoken|gee|turnstile|html\/bloqueio|doctype/i;
 const PROSA = /\s/;
 const TOKENISH = /^[A-Za-z0-9_\-\.~=+/]{16,}$/;
-const MAX_PERFIL_REQ = 8;
+const MAX_PERFIL_REQ = 6;
 
 function dumpCaptcha(casa, username, etapa, dados) {
   try {
@@ -133,7 +133,6 @@ function ehCaptcha(norm) {
   return CAPTCHA_RE.test(txt);
 }
 
-/** A casa manda hToken no próprio body? Então o token vai antes do 1º envio. */
 function corpoEsperaToken(body) {
   const b = (body && body.json) || body || {};
   return "hToken" in b || !!(body && body.meta && body.meta.values && body.meta.values.hToken);
@@ -232,7 +231,7 @@ export async function login(casa, username, password) {
     let token = deepFind(norm.data || {}, TOKEN_KEYS);
 
     if (!token && /muitas solicita|too many|rate limit|aguarde/i.test(norm.msg || "")) {
-      await sleep(6000 + Math.random() * 2000);
+      await sleep(3000 + Math.random() * 1500);
       norm = normalize(await post(casa, casa.loginPath, body));
       token = deepFind(norm.data || {}, TOKEN_KEYS);
     }
@@ -262,7 +261,7 @@ export async function login(casa, username, password) {
         const sol = await solveCaptcha(casa.domain, casa.tenantId, username, alvoCap.id, extraTurnstile(casa));
         if (!sol) {
           ultimo = { ok: false, error: "provedor de captcha não devolveu token", code: norm.code, modo };
-          await sleep(1200 * tent);
+          await sleep(1000 * tent);
           continue;
         }
 
@@ -271,7 +270,7 @@ export async function login(casa, username, password) {
 
         norm = normalize(await post(casa, casa.loginPath, retry));
         token = deepFind(norm.data || {}, TOKEN_KEYS);
-        if (!token) await sleep(1000 * tent);
+        if (!token) await sleep(800 * tent);
       }
 
       if (!token) {
@@ -310,60 +309,58 @@ function mergeInto(dest, src, depth = 0) {
   return dest;
 }
 
+/** Perfil: VIP e saldo em paralelo, parando assim que os dois chegam. */
 export async function fetchPerfil(casa, auth) {
   const conhecido = perfilConhecido(casa.domain);
   const alvos = [];
-  if (casa.perfilPath) alvos.push(casa.perfilPath);
-  if (conhecido) alvos.push(conhecido);
-  for (const proc of [...(casa.perfilProcs || []), ...PERFIL_PROCS]) {
-    const p = withRouter(casa, proc);
-    if (!alvos.includes(p)) alvos.push(p);
-  }
+  const push = (p) => { if (p && !alvos.includes(p)) alvos.push(p); };
+
+  push(conhecido);
+  push(casa.perfilPath);
+  for (const proc of [...(casa.perfilProcs || []), ...PERFIL_PROCS]) push(withRouter(casa, proc));
 
   const combinado = {};
   const erros = [];
-  const creds = credVariants(auth).slice(0, 2);
   let usadas = 0;
 
+  const acc = () => extractAccount(combinado, casa);
   const completo = () => {
-    const acc = extractAccount(combinado, casa);
-    return acc.balance !== null && acc.vip !== null;
+    const a = acc();
+    return a.vip !== null && a.balance !== null;
   };
   const temAlgo = () => {
-    const acc = extractAccount(combinado, casa);
-    return acc.balance !== null || acc.vip !== null;
+    const a = acc();
+    return a.vip !== null || a.balance !== null;
   };
 
-  for (const path of alvos) {
-    if (usadas >= MAX_PERFIL_REQ || completo()) break;
-
-    for (const cred of creds) {
-      if (usadas >= MAX_PERFIL_REQ || completo()) break;
-      const authV = withAuth(auth, cred);
-      let serviu = false;
-
-      for (const metodo of ["GET", "POST"]) {
-        if (usadas >= MAX_PERFIL_REQ) break;
-        usadas++;
-        try {
-          const raw = metodo === "GET"
-            ? await get(casa, path, { json: {} }, authV)
-            : await post(casa, path, { json: {} }, authV);
-          const norm = normalize(raw);
-          if (norm.ok && norm.data && typeof norm.data === "object") {
-            mergeInto(combinado, norm.data);
-            marcarPerfilOk(casa.domain, path);
-            serviu = true;
-            break;
-          }
-          erros.push(`${rotulo(path)}: ${norm.msg}`);
-        } catch (e) {
-          erros.push(`${rotulo(path)}: ${e.message}`);
+  const pedir = async (path, authV) => {
+    for (const metodo of ["GET", "POST"]) {
+      if (usadas >= MAX_PERFIL_REQ) return false;
+      usadas++;
+      try {
+        const raw = metodo === "GET"
+          ? await get(casa, path, { json: {} }, authV)
+          : await post(casa, path, { json: {} }, authV);
+        const norm = normalize(raw);
+        if (norm.ok && norm.data && typeof norm.data === "object") {
+          mergeInto(combinado, norm.data);
+          marcarPerfilOk(casa.domain, path);
+          return true;
         }
+        erros.push(`${rotulo(path)}: ${norm.msg}`);
+      } catch (e) {
+        erros.push(`${rotulo(path)}: ${e.message}`);
       }
-
-      if (serviu) break;
     }
+    return false;
+  };
+
+  const cred = credVariants(auth)[0];
+  const authV = withAuth(auth, cred);
+
+  for (let i = 0; i < alvos.length && !completo(); i += 2) {
+    if (usadas >= MAX_PERFIL_REQ) break;
+    await Promise.all(alvos.slice(i, i + 2).map((p) => pedir(p, authV)));
   }
 
   if (!temAlgo()) {
@@ -394,8 +391,8 @@ export async function fetchInfo(casa, auth) {
         erros.push(`${rotulo(path)}: ${e.message}`);
       }
     }
-    const acc = extractAccount(combinado, casa);
-    if (acc.balance !== null && acc.vip !== null) break;
+    const a = extractAccount(combinado, casa);
+    if (a.balance !== null && a.vip !== null) break;
   }
 
   if (!Object.keys(combinado).length) {
@@ -514,9 +511,10 @@ export async function fullCheck(casa, casaNome, username, password) {
     report.status = "LOGIN_OK";
 
     const perfil = await fetchPerfil(casa, auth);
-    let acc = perfil.ok && perfil.data ? extractAccount(perfil.data) : null;
+    let acc = perfil.ok && perfil.data ? extractAccount(perfil.data, casa) : null;
 
-    if (!acc || acc.balance === null) {
+    // HTML do perfil só quando o JSON não trouxe nada de nada
+    if (!acc || (acc.balance === null && acc.vip === null)) {
       const htmlPerfil = await fetchPerfilHtml(casa, auth);
       if (htmlPerfil.ok) {
         acc = {

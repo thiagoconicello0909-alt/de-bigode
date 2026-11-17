@@ -43,9 +43,11 @@ export function loadProxies(arquivo) {
   return lista.length;
 }
 
+/** Gateway rotativo tem 1 entrada: banir por 45s derruba tudo para a conexão direta. */
 export function banirProxy(proxy, ms = BAN_PADRAO) {
   if (!proxy) return;
-  cooldown.set(proxy, Date.now() + ms);
+  const msFinal = lista.length <= 1 ? Math.min(ms, 5000) : ms;
+  cooldown.set(proxy, Date.now() + msFinal);
 }
 
 export function proxiesLivres() {

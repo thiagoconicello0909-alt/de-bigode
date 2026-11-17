@@ -16,23 +16,28 @@ _sem = threading.Semaphore(_CONCURRENCY)
 
 # UA/sec-ch-ua coerentes com cada impersonação. O UA da casa é ignorado.
 PROFILES = {
+    "chrome_133": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+        '"Chromium";v="133", "Not(A:Brand";v="24", "Google Chrome";v="133"',
+        "Windows",
+    ),
+    "chrome_131": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        '"Chromium";v="131", "Not(A:Brand";v="24", "Google Chrome";v="131"',
+        "Windows",
+    ),
+    "chrome_124": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        '"Chromium";v="124", "Not(A:Brand";v="24", "Google Chrome";v="124"',
+        "Windows",
+    ),
     "chrome_120": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
         "Windows",
     ),
-    "chrome_107": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
-        '"Chromium";v="107", "Google Chrome";v="107", "Not=A?Brand";v="99"',
-        "Windows",
-    ),
-    "chrome_103": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
-        '"Chromium";v="103", "Google Chrome";v="103", "Not=A?Brand";v="99"',
-        "Windows",
-    ),
-    "firefox_108": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0",
+    "firefox_120": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
         None,
         None,
     ),
@@ -41,6 +46,9 @@ PROFILES = {
 _IDENTS = list(PROFILES.keys())
 
 CF_MARKS = ("just a moment", "attention required", "cf-challenge", "cf_chl_opt", "checking your browser", "__cf_chl")
+
+TIMEOUT_REQ = 15
+MAX_TENT = 2
 
 
 class SessionPool:
@@ -82,15 +90,6 @@ class SessionPool:
             except Exception:
                 pass
 
-    def descartar(self, item):
-        try:
-            item[0].close()
-        except Exception:
-            pass
-        novo = self._make_session()
-        if novo:
-            self.release(novo)
-
 
 def get_pool():
     global _session_pool
@@ -99,6 +98,30 @@ def get_pool():
             if _session_pool is None:
                 _session_pool = SessionPool(_SESSION_POOL_SIZE)
     return _session_pool
+
+
+def soltar(item, com_proxy):
+    """Com proxy: fecha a sessão para o gateway sortear IP novo na próxima.
+    Sem proxy: devolve ao pool."""
+    if com_proxy:
+        try:
+            item[0].close()
+        except Exception:
+            pass
+        return
+    get_pool().release(item)
+
+
+def descartar(item, com_proxy):
+    try:
+        item[0].close()
+    except Exception:
+        pass
+    if com_proxy:
+        return
+    novo = get_pool()._make_session()
+    if novo:
+        get_pool().release(novo)
 
 
 def aplicar_perfil(headers_clean, ident):
@@ -168,6 +191,7 @@ class Handler(BaseHTTPRequestHandler):
         headers = data.get("headers", {})
         body = data.get("body", "")
         proxy_url = data.get("proxy")
+        com_proxy = bool(proxy_url)
 
         if not url:
             self.send_json(400, {"error": "url obrigatoria"})
@@ -186,11 +210,11 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(503, {"error": "proxy sobrecarregado"})
             return
 
-        pool = get_pool()
         last_err = None
         try:
-            for attempt in range(3):
-                item = pool.acquire(timeout=5)
+            for attempt in range(MAX_TENT):
+                # com proxy: sessão nova a cada tentativa = IP novo no gateway
+                item = get_pool()._make_session() if com_proxy else get_pool().acquire(timeout=5)
                 if item is None:
                     last_err = "sem sessao disponivel"
                     time.sleep(0.25)
@@ -198,29 +222,29 @@ class Handler(BaseHTTPRequestHandler):
 
                 session, ident = item
                 try:
-                    session.proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else {}
+                    session.proxies = {"http": proxy_url, "https": proxy_url} if com_proxy else {}
                     hdrs = aplicar_perfil(dict(headers_clean), ident)
 
                     if self.path == "/get":
-                        resp = session.get(url, headers=hdrs, timeout_seconds=20, allow_redirects=False)
+                        resp = session.get(url, headers=hdrs, timeout_seconds=TIMEOUT_REQ, allow_redirects=False)
                     else:
-                        resp = session.post(url, data=body_bytes, headers=hdrs, timeout_seconds=20, allow_redirects=False)
+                        resp = session.post(url, data=body_bytes, headers=hdrs, timeout_seconds=TIMEOUT_REQ, allow_redirects=False)
 
                     texto = resp.text or ""
 
                     if resp.status_code == 407:
-                        pool.descartar(item)
+                        descartar(item, com_proxy)
                         last_err = "407 Proxy Authentication Required"
-                        time.sleep(0.4 * (attempt + 1))
+                        time.sleep(0.3 * (attempt + 1))
                         continue
 
-                    if eh_desafio(resp.status_code, texto) and attempt < 2:
-                        pool.descartar(item)
+                    if eh_desafio(resp.status_code, texto) and attempt < MAX_TENT - 1:
+                        descartar(item, com_proxy)
                         last_err = "desafio cloudflare (%s)" % resp.status_code
-                        time.sleep(0.8 + attempt * 0.7)
+                        time.sleep(0.5 + attempt * 0.4)
                         continue
 
-                    pool.release(item)
+                    soltar(item, com_proxy)
                     self.send_json(200, {
                         "status": resp.status_code,
                         "text": texto,
@@ -230,9 +254,9 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 except Exception as e:
                     last_err = str(e)
-                    pool.descartar(item)
-                    if attempt < 2:
-                        time.sleep(0.3)
+                    descartar(item, com_proxy)
+                    if attempt < MAX_TENT - 1:
+                        time.sleep(0.25)
         finally:
             _sem.release()
 
@@ -241,7 +265,7 @@ class Handler(BaseHTTPRequestHandler):
 
 class ThreadedHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
     daemon_threads = True
-    allow_rea_address = True
+    allow_reuse_address = True
     request_queue_size = 512
     block_on_close = False
 
@@ -250,5 +274,5 @@ if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 3334
     get_pool()
     server = ThreadedHTTPServer(("127.0.0.1", port), Handler)
-    print(f"[TLSProxy] Iniciando na porta {port} | concorrencia={_CONCURRENCY}...", flush=True)
+    print(f"[TLSProxy] Iniciando na porta {port} | concorrencia={_CONCURRENCY} | rotacao=por_request", flush=True)
     server.serve_forever()

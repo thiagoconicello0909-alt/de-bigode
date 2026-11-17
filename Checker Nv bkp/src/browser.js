@@ -1,18 +1,24 @@
+// browser.js v5 — estoque primeiro, trava por aba, um token por reload
 import { spawn } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import * as stock from "./tokens.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const PORTA_BASE = 9333;
-const ABAS_PADRAO = 10;
-const VALIDADE_PAR = 120000;
+const PORTA_BASE = Number(process.env.CHK_PORTA) || 9333;
+const ABAS_PADRAO = 4;
+const ESPERA_BROWSER = 45000;
+const ESPERA_MINT = 40000;
 const UA_PADRAO =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0";
 
 const estados = new Map();
 const criando = new Map();
-let proximaPorta = PORTA_BASE;
+const desdeReload = new Map();
+const travas = new Map();
+let rodizio = 0;
+let mintando = null;
 
 function acharExe() {
   return [
@@ -23,10 +29,39 @@ function acharExe() {
   ].find((p) => fs.existsSync(p));
 }
 
+async function portaOcupada(porta) {
+  try {
+    const r = await fetch(`http://127.0.0.1:${porta}/json/version`, { signal: AbortSignal.timeout(400) });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function acharPorta() {
+  for (let i = 0; i < 60; i++) {
+    const p = PORTA_BASE + i;
+    if (!(await portaOcupada(p))) return p;
+  }
+  throw new Error("sem porta livre para o browser");
+}
+
+async function comTrava(chave, fn) {
+  const anterior = travas.get(chave) || Promise.resolve();
+  let liberar;
+  const atual = new Promise((r) => (liberar = r));
+  travas.set(chave, anterior.then(() => atual));
+  await anterior;
+  try {
+    return await fn();
+  } finally {
+    liberar();
+  }
+}
+
 async function abrirBrowser(casa, porta) {
   const exe = acharExe();
   if (!exe) throw new Error("Chrome/Edge nao encontrado");
-
   const ua = casa.headers?.["user-agent"] || UA_PADRAO;
   const perfil = path.join(os.tmpdir(), `chk_${porta}_${Date.now()}`);
   const proc = spawn(exe, [
@@ -47,16 +82,19 @@ async function abrirBrowser(casa, porta) {
   ], { stdio: "ignore" });
 
   let wsUrl = null;
-  for (let t = 0; t < 60 && !wsUrl; t++) {
+  for (let t = 0; t < 40 && !wsUrl; t++) {
     try {
-      const r = await fetch(`http://127.0.0.1:${porta}/json/version`);
-      if (r.ok) wsUrl = (await r.json()).webSocketDebuggerUrl;
+      const r = await fetch(`http://127.0.0.1:${porta}/json/version`, { signal: AbortSignal.timeout(800) });
+      if (r.ok) {
+        const info = await r.json();
+        if (info?.webSocketDebuggerUrl?.includes(`:${porta}/`)) wsUrl = info.webSocketDebuggerUrl;
+      }
     } catch {}
     if (!wsUrl) await sleep(400);
   }
   if (!wsUrl) {
-    proc.kill();
-    throw new Error("browser nao abriu o debug");
+    try { proc.kill(); } catch {}
+    throw new Error(`browser nao abriu o debug na porta ${porta}`);
   }
 
   const ws = new WebSocket(wsUrl);
@@ -77,14 +115,31 @@ async function abrirBrowser(casa, porta) {
     });
 
   await new Promise((r) => ws.addEventListener("open", r));
+  return { ws, cmd, proc, perfil, ua, dominio: casa.domain, paginas: [], tamanho: 0, ativo: true };
+}
 
-  return { ws, cmd, proc, perfil, ua, dominio: casa.domain, paginas: [], tamanho: 0, fila: [], ativo: false, mintando: false };
+async function carregar(est, pagina, casa, ms = 8000) {
+  try {
+    await est.cmd("Page.navigate", { url: `https://${casa.domain}/` }, pagina.sessionId);
+  } catch {}
+  const fim = Date.now() + ms;
+  while (Date.now() < fim) {
+    try {
+      const ev = await est.cmd(
+        "Runtime.evaluate",
+        { expression: "document.readyState === 'complete' && !!window.turnstile", returnByValue: true },
+        pagina.sessionId,
+      );
+      if (ev.result?.result?.value === true) return true;
+    } catch {}
+    await sleep(250);
+  }
+  return false;
 }
 
 async function novaPagina(est, casa) {
   const c = await est.cmd("Target.createTarget", { url: "about:blank" });
   const s = (await est.cmd("Target.attachToTarget", { targetId: c.result.targetId, flatten: true })).result.sessionId;
-
   await est.cmd("Page.enable", {}, s);
   await est.cmd("Runtime.enable", {}, s);
   await est.cmd("Emulation.setUserAgentOverride", {
@@ -92,16 +147,15 @@ async function novaPagina(est, casa) {
     acceptLanguage: "pt-BR,pt;q=0.9",
     platform: "Win32",
   }, s);
-
-  await est.cmd("Page.navigate", { url: `https://${casa.domain}/` }, s);
-  await sleep(5000);
-
-  return { sessionId: s };
+  const pagina = { sessionId: s };
+  await carregar(est, pagina, casa);
+  return pagina;
 }
 
 async function encerrarDominio(dominio) {
   const e = estados.get(dominio);
   estados.delete(dominio);
+  desdeReload.delete(dominio);
   if (!e) return;
   e.ativo = false;
   try { e.ws.close(); } catch {}
@@ -109,7 +163,8 @@ async function encerrarDominio(dominio) {
   try { fs.rmSync(e.perfil, { recursive: true, force: true }); } catch {}
 }
 
-export async function fecharBrowser() {
+export async function fecharBrowser(dominio) {
+  if (dominio) return encerrarDominio(dominio);
   await Promise.all([...estados.keys()].map((d) => encerrarDominio(d)));
 }
 
@@ -121,11 +176,14 @@ async function garantir(casa) {
 
   const tarefa = (async () => {
     await encerrarDominio(chave);
-    const porta = proximaPorta++;
+    const porta = await acharPorta();
     const est = await abrirBrowser(casa, porta);
-    est.tamanho = Math.max(2, Math.min(24, Number(casa.browserPages) || ABAS_PADRAO));
-    est.paginas = await Promise.all(Array.from({ length: est.tamanho }, () => novaPagina(est, casa)));
-    est.ativo = true;
+    est.tamanho = Math.max(2, Math.min(16, Number(casa.browserPages) || ABAS_PADRAO));
+    est.paginas = await Promise.all(
+      Array.from({ length: est.tamanho }, () => novaPagina(est, casa)),
+    );
+    est.paginas = est.paginas.filter(Boolean);
+    if (!est.paginas.length) throw new Error("nenhuma aba abriu");
     estados.set(chave, est);
     criando.delete(chave);
     return est;
@@ -138,6 +196,15 @@ async function garantir(casa) {
   return tarefa;
 }
 
+async function garantirComPrazo(casa) {
+  return Promise.race([
+    garantir(casa),
+    sleep(ESPERA_BROWSER).then(() => {
+      throw new Error("browser nao subiu");
+    }),
+  ]);
+}
+
 async function avaliar(est, pagina, expr) {
   const ev = await est.cmd("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true }, pagina.sessionId);
   if (ev.result?.exceptionDetails) {
@@ -148,107 +215,132 @@ async function avaliar(est, pagina, expr) {
   return v;
 }
 
+/** Um par de widgets (X-Token api_protection + hToken login), um de cada vez. */
 function exprTokens(casa) {
   const cdata = `${casa.tenantId}=${casa.deviceId}`;
-  const sitekeyHeader = casa.turnstile?.sitekeyHeader || "0x4AAAAAAB0oRY23FyZnllMo";
+  const skX = casa.turnstile?.sitekeyHeader || "0x4AAAAAAB0oRY23FyZnllMo";
+  const skH = casa.turnstile?.sitekeyLogin || "0x4AAAAAAAiHEkDee-yqSdMj";
 
   return `(async()=>{
     if (!window.turnstile) throw new Error("turnstile ausente");
     const cdata = ${JSON.stringify(cdata)};
 
-    let box = document.getElementById("__cfbox");
-    if (!box) {
-      box = document.createElement("div");
-      box.id = "__cfbox";
-      box.style.cssText = "position:fixed;top:0;left:0;width:340px;height:110px;z-index:2147483647;background:#fff";
-      document.body.appendChild(box);
-    }
-
-    if (window.__cfId != null) {
-      try { window.turnstile.remove(window.__cfId); } catch {}
-      window.__cfId = null;
-    }
-    box.innerHTML = "";
-
-    const d = document.createElement("div");
-    box.appendChild(d);
-
-    const token = await new Promise((res, rej) => {
-      const t = setTimeout(() => rej(new Error("timeout api_protection")), 25000);
-      try {
-        window.__cfId = window.turnstile.render(d, {
-          sitekey: ${JSON.stringify(sitekeyHeader)},
-          action: "api_protection",
-          cData: cdata,
-          size: "flexible",
-          callback: (v) => { clearTimeout(t); res(v); },
-          "error-callback": (e) => { clearTimeout(t); rej(new Error("erro api_protection " + e)); },
-        });
-      } catch (e) {
-        clearTimeout(t);
-        rej(e);
+    function alvo(id, top) {
+      let b = document.getElementById(id);
+      if (!b) {
+        b = document.createElement("div");
+        b.id = id;
+        b.style.cssText = "position:fixed;left:0;width:340px;height:110px;z-index:2147483647;background:#fff;top:" + top;
+        document.body.appendChild(b);
       }
-    });
+      const d = document.createElement("div");
+      d.style.cssText = "position:absolute;top:0;left:0";
+      b.appendChild(d);
+      return d;
+    }
 
-    return JSON.stringify({ x: token });
+    function um(id, sitekey, action, top) {
+      return new Promise((res, rej) => {
+        const tm = setTimeout(() => rej(new Error("timeout " + action)), 12000);
+        try {
+          window.turnstile.render(alvo(id, top), {
+            sitekey: sitekey,
+            action: action,
+            cData: cdata,
+            size: "flexible",
+            callback: (v) => { clearTimeout(tm); res(v); },
+            "error-callback": (e) => { clearTimeout(tm); rej(new Error("erro " + action + " " + e)); },
+          });
+        } catch (e) {
+          clearTimeout(tm);
+          rej(e);
+        }
+      });
+    }
+
+    const x = await um("__cfboxX", ${JSON.stringify(skX)}, "api_protection", "0px");
+    const h = await um("__cfboxH", ${JSON.stringify(skH)}, "login", "120px");
+
+    return JSON.stringify({ x, h });
   })()`;
 }
 
 async function resolverTokens(est, pagina, casa) {
   const bruto = await avaliar(est, pagina, exprTokens(casa));
   const t = JSON.parse(bruto);
-  if (!t.x) throw new Error("token incompleto");
-  return { x: t.x, h: "" };
+  if (!t.x || !t.h) throw new Error("token incompleto");
+  return { x: t.x, h: t.h };
 }
 
-/** Fábrica de tokens: cada aba produz pares continuamente. */
-function iniciarMintagem(est, casa, acao) {
-  if (est.mintando) return;
-  est.mintando = true;
-  const teto = est.tamanho * 2;
-  let ultimoErro = 0;
+function guardarPar(casa, par) {
+  try {
+    stock.guardar?.(casa.domain, par.x, par.h);
+  } catch {}
+}
 
-  process.stdout.write(`  [fabrica] ${est.tamanho} abas em ${casa.domain}\n`);
-
-  for (const pagina of est.paginas) {
-    (async () => {
-      while (est.ativo) {
-        if (est.fila.length >= teto) { await sleep(120); continue; }
-        try {
-          const par = await resolverTokens(est, pagina, casa, acao);
-          if (est.ativo) est.fila.push({ ...par, ts: Date.now() });
-          await sleep(120 + Math.random() * 180);
-        } catch (e) {
-          if (Date.now() - ultimoErro > 3000) {
-            ultimoErro = Date.now();
-            process.stdout.write(`  [fabrica] erro: ${e.message}\n`);
-          }
-          await sleep(250);
-        }
-      }
-    })();
+function lerStock(dominio) {
+  try {
+    const t = stock.consumir?.(dominio);
+    if (!t) return null;
+    if (typeof t === "string") return { x: t, h: "" };
+    if (t.x) return { x: t.x, h: t.h || "" };
+    return null;
+  } catch {
+    return null;
   }
 }
 
-/** Pega um par pronto. Espera se a fábrica ainda não produziu. */
-export async function obterPar(casa, acao = "login") {
-  const est = await garantir(casa);
-  iniciarMintagem(est, casa, acao);
+/** Minta um par numa aba e guarda no estoque. Usado pela fábrica. */
+export async function mintarPar(casa) {
+  const est = await garantirComPrazo(casa);
+  if (!est.paginas.length) throw new Error("sem abas");
+  const pagina = est.paginas[rodizio++ % est.paginas.length];
 
-  for (let t = 0; t < 1800; t++) {
-    while (est.fila.length) {
-      const par = est.fila.shift();
-      if (Date.now() - par.ts < VALIDADE_PAR) return par;
+  return comTrava(pagina.sessionId, async () => {
+    if (desdeReload.get(pagina.sessionId)) {
+      desdeReload.set(pagina.sessionId, 0);
+      await carregar(est, pagina, casa);
     }
-    if (!est.ativo) break;
-    await sleep(60);
+
+    let par;
+    try {
+      par = await resolverTokens(est, pagina, casa);
+    } catch (e) {
+      if (/turnstile ausente|retorno inesperado|timeout/.test(e.message)) {
+        await carregar(est, pagina, casa);
+        par = await resolverTokens(est, pagina, casa);
+      } else {
+        throw e;
+      }
+    }
+
+    guardarPar(casa, par);
+    desdeReload.set(pagina.sessionId, 1);
+    return par;
+  });
+}
+
+/** Estoque primeiro. Browser só se o estoque estiver vazio. */
+export async function obterPar(casa) {
+  const doEstoque = lerStock(casa.domain);
+  if (doEstoque) return doEstoque;
+
+  if (!mintando) {
+    mintando = mintarPar(casa).finally(() => {
+      mintando = null;
+    });
   }
-  throw new Error("sem token disponivel");
+  return Promise.race([
+    mintando,
+    sleep(ESPERA_MINT).then(() => {
+      throw new Error("estoque vazio e mint lento");
+    }),
+  ]);
 }
 
 /** Reserva: executa o login dentro da página, quando o HTTP não passa. */
 export async function fetchNoBrowser(casa, payload, acao, par) {
-  const est = await garantir(casa);
+  const est = await garantirComPrazo(casa);
   const pagina = est.paginas[0];
   const api = `https://${casa.apiHost}/api/frontend/trpc`;
   const url = acao === "register" ? `${api}/auth.registe` : `${api}/auth.login`;
@@ -263,7 +355,7 @@ export async function fetchNoBrowser(casa, payload, acao, par) {
       "content-type": "application/json",
       "tenantid": ${JSON.stringify(String(casa.tenantId))},
       "x-request-source": "web_client",
-      "x-client-version": ${JSON.stringify(casa.clientVersion || "v242")},
+      "x-client-version": ${JSON.stringify(casa.clientVersion || "v240")},
       "x-device-id": ${JSON.stringify(casa.deviceId)},
       "x-device-type": "DesktopOS",
       "x-trace-id": Math.random().toString(36).slice(2, 10).toUpperCase(),
@@ -277,8 +369,10 @@ export async function fetchNoBrowser(casa, payload, acao, par) {
   return avaliar(est, pagina, expr);
 }
 
-/** Compatibilidade: login inteiro pelo browser, usando par da fila. */
-export async function loginBrowser(casa, payload, acao = "login") {
-  const par = await obterPar(casa, acao);
-  return fetchNoBrowser(casa, payload, acao, par);
+/** Reserva: executa o login dentro da página, quando o HTTP não passa. */
+export async function loginNaPagina(casa, payload, acao = "login", par) {
+  const p = par || (await obterPar(casa));
+  return fetchNoBrowser(casa, payload, acao, p);
 }
+
+export const loginBrowser = loginNaPagina;
